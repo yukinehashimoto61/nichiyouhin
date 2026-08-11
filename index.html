@@ -42,6 +42,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .counts { display: flex; gap: 18px; margin-top: 10px; font-family: var(--mono); font-size: 12px; color: var(--muted); }
 .counts b { font-size: 15px; color: var(--ink); font-weight: 700; margin-left: 5px; }
 .counts .hot b { color: var(--signal-ink); }
+.counts .exp b { color: var(--stamp); }
+.counts [hidden] { display: none; }
 
 .tabs {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: flex;
@@ -94,6 +96,11 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .card-main { display: flex; align-items: center; gap: 12px; padding: 13px 13px 13px 22px; }
 .name { font-size: 16px; font-weight: 700; line-height: 1.35; }
 .meta { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 4px; }
+.pill { display: inline-block; font-family: var(--mono); font-size: 10.5px; font-weight: 700; line-height: 1;
+  padding: 3px 6px; border-radius: 999px; margin-left: 7px; vertical-align: 2px; }
+.pill.soon { background: var(--signal); color: var(--signal-ink); }
+.pill.over { background: var(--stamp); color: #fff; }
+.hint { font-size: 11.5px; color: var(--muted); margin-top: 6px; line-height: 1.6; }
 .memo { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
 .grow { flex: 1; min-width: 0; }
 .stack { display: flex; flex-direction: column; gap: 6px; }
@@ -136,6 +143,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
     <div class="counts">
       <span>登録<b id="cAll">0</b></span>
       <span class="hot">そろそろ<b id="cLow">0</b></span>
+      <span class="exp" id="cExpWrap" hidden>期限<b id="cExp">0</b></span>
     </div>
     <nav class="tabs" id="tabs"></nav>
   </header>
@@ -146,7 +154,9 @@ button, input, select, textarea { font: inherit; color: inherit; }
 <script>
 "use strict";
 const KEY = "nichiyohin:items:v1";
-const CATEGORIES = ["キッチン","バス・トイレ","洗濯","掃除","衛生・ケア","紙もの","その他"];
+const CATEGORIES = ["食品","飲みもの","キッチン","バス・トイレ","洗濯","掃除","衛生・ケア","紙もの","その他"];
+const DATED = ["食品"];
+const hasExpiry = (cat) => DATED.indexOf(cat) >= 0;
 const TABS = [["list","一覧"],["add","新規登録"],["low","そろそろ"],["buy","買うもの"]];
 
 let items = [];
@@ -155,7 +165,7 @@ let openId = null;
 let editId = null;
 let confirmId = null;
 let toast = "";
-let addDraft = { name: "", category: CATEGORIES[0], place: "", memo: "" };
+let addDraft = { name: "", category: CATEGORIES[0], place: "", memo: "", expiry: "" };
 let query = { list: "", low: "" };
 let filter = "all";
 
@@ -165,6 +175,33 @@ const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&":
 const fmtDate = (ts) => { if (!ts) return "未記録"; const d = new Date(ts);
   return d.getFullYear() + "." + String(d.getMonth()+1).padStart(2,"0") + "." + String(d.getDate()).padStart(2,"0"); };
 const daysSince = (ts) => (ts ? Math.floor((Date.now() - ts) / 86400000) : null);
+
+/* 賞味期限は "YYYY-MM-DD" の文字列で持つ。残り日数と、近さの段階を返す。 */
+function expiryInfo(item) {
+  if (!item || !item.expiry) return null;
+  const p = item.expiry.split("-");
+  if (p.length !== 3) return null;
+  const target = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+  if (isNaN(target)) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const days = Math.round((target - today) / 86400000);
+  const level = days < 0 ? "over" : days <= 3 ? "soon" : days <= 7 ? "near" : "ok";
+  const text = days < 0 ? Math.abs(days) + "日過ぎ" : days === 0 ? "今日まで" : "あと" + days + "日";
+  return { days: days, level: level, text: text,
+    date: p[0] + "." + p[1] + "." + p[2] };
+}
+function expiryPill(item) {
+  const e = expiryInfo(item);
+  if (!e || e.level === "ok") return "";
+  const cls = e.level === "over" ? "over" : "soon";
+  const label = e.level === "over" ? "期限切れ" : e.text;
+  return '<span class="pill ' + cls + '">' + label + '</span>';
+}
+function expiryMeta(item) {
+  const e = expiryInfo(item);
+  return e ? '／期限 ' + e.date + '（' + e.text + '）' : "";
+}
 
 function load() {
   try { const raw = localStorage.getItem(KEY); const p = raw ? JSON.parse(raw) : []; if (Array.isArray(p)) items = p; }
@@ -180,7 +217,13 @@ function lowItems() { return items.filter(i => i.status === "low").sort((a,b) =>
 function find(id) { return items.find(i => i.id === id); }
 function markLow(id) { const it = find(id); if (it) { it.status = "low"; it.lowAt = Date.now(); commit(); } }
 function unmarkLow(id) { const it = find(id); if (it) { it.status = "ok"; it.lowAt = null; commit(); } }
-function bought(id) { const it = find(id); if (it) { it.status = "ok"; it.lowAt = null; it.lastBoughtAt = Date.now(); it.buyCount = (it.buyCount||0) + 1; commit(); } }
+function bought(id) {
+  const it = find(id);
+  if (!it) return;
+  it.status = "ok"; it.lowAt = null; it.lastBoughtAt = Date.now(); it.buyCount = (it.buyCount||0) + 1;
+  it.expiry = ""; // 買い直したので前の期限は当てはまらない。新しい期限は詳細から入れ直す
+  commit();
+}
 function removeItem(id) { items = items.filter(i => i.id !== id); confirmId = null; openId = null; commit(); }
 
 /* ---------- 画面 ---------- */
@@ -209,6 +252,11 @@ function addScreen() {
     '<label class="field"><span class="label">品名</span>' +
       '<input class="input" id="aName" value="' + esc(addDraft.name) + '" placeholder="トイレットペーパー"></label>' +
     '<div class="field"><span class="label">カテゴリ</span>' + chipsHtml(addDraft.category, "data-acat") + '</div>' +
+    (hasExpiry(addDraft.category)
+      ? '<label class="field"><span class="label">賞味期限（任意）</span>' +
+        '<input class="input" type="date" id="aExpiry" value="' + esc(addDraft.expiry) + '">' +
+        '<span class="hint">入れておくと、期限が近づいたものが一覧の上に出ます。空のままでも登録できます。</span></label>'
+      : "") +
     '<label class="field"><span class="label">置き場所（任意）</span>' +
       '<input class="input" id="aPlace" value="' + esc(addDraft.place) + '" placeholder="洗面台の下"></label>' +
     '<label class="field"><span class="label">メモ（任意）</span>' +
@@ -244,8 +292,8 @@ function lowScreen() {
   } else {
     h += groups.map(([cat, arr]) => '<div class="group">' + esc(cat) + '</div>' + arr.map(i =>
       '<div class="card"><div class="card-main"><div class="grow">' +
-      '<div class="name">' + esc(i.name) + '</div>' +
-      '<div class="meta">' + (i.place ? esc(i.place) + "／" : "") + '前回 ' + fmtDate(i.lastBoughtAt) + '</div></div>' +
+      '<div class="name">' + esc(i.name) + expiryPill(i) + '</div>' +
+      '<div class="meta">' + (i.place ? esc(i.place) + "／" : "") + '前回 ' + fmtDate(i.lastBoughtAt) + expiryMeta(i) + '</div></div>' +
       '<button class="btn warn sm" data-low="' + i.id + '">そろそろ</button></div></div>').join("")).join("");
   }
   return h + '</div></section>';
@@ -273,12 +321,20 @@ function detailHtml(i) {
     return '<div class="detail">' +
       '<label class="field"><span class="label">品名</span><input class="input" id="eName" value="' + esc(i.name) + '"></label>' +
       '<div class="field"><span class="label">カテゴリ</span>' + chipsHtml(i.category, "data-ecat") + '</div>' +
+      (hasExpiry(i.category)
+        ? '<label class="field"><span class="label">賞味期限（任意）</span>' +
+          '<input class="input" type="date" id="eExpiry" value="' + esc(i.expiry||"") + '"></label>'
+        : "") +
       '<label class="field"><span class="label">置き場所</span><input class="input" id="ePlace" value="' + esc(i.place||"") + '"></label>' +
       '<label class="field"><span class="label">メモ</span><textarea class="area" id="eMemo">' + esc(i.memo||"") + '</textarea></label>' +
       '<div class="row"><button class="btn sm" data-savee="' + i.id + '">保存する</button>' +
       '<button class="btn ghost sm" data-cancele="1">やめる</button></div></div>';
   }
+  const e = expiryInfo(i);
   return '<div class="detail"><dl class="dl">' +
+    (hasExpiry(i.category)
+      ? '<dt>賞味期限</dt><dd>' + (e ? e.date + "（" + e.text + "）" : "未設定") + '</dd>'
+      : "") +
     '<dt>置き場所</dt><dd>' + (i.place ? esc(i.place) : "未設定") + '</dd>' +
     '<dt>メモ</dt><dd>' + (i.memo ? esc(i.memo) : "なし") + '</dd>' +
     '<dt>前回購入</dt><dd>' + fmtDate(i.lastBoughtAt) + '</dd>' +
@@ -295,15 +351,34 @@ function listScreen() {
   if (!items.length) return emptyBox("まだ何も登録されていません",
     "よく使う日用品を登録すると、ここに並びます。", "新規登録へ", "add");
   const q = query.list.trim().toLowerCase();
+  // 期限切れ→期限間近→そろそろ→その他 の順に上へ
+  const rank = (i) => {
+    const e = expiryInfo(i);
+    if (e && e.level === "over") return 0;
+    if (e && (e.level === "soon" || e.level === "near")) return 1;
+    if (i.status === "low") return 2;
+    return 3;
+  };
   const shown = items
-    .filter(i => filter === "all" ? true : filter === "low" ? i.status === "low" : i.status === "ok")
+    .filter(i => {
+      if (filter === "low") return i.status === "low";
+      if (filter === "ok") return i.status === "ok";
+      if (filter === "exp") { const e = expiryInfo(i); return !!e && e.level !== "ok"; }
+      return true;
+    })
     .filter(i => (i.name + i.category + (i.place||"") + (i.memo||"")).toLowerCase().includes(q))
-    .sort((a,b) => a.status === b.status ? a.category.localeCompare(b.category, "ja") : (a.status === "low" ? -1 : 1));
+    .sort((a,b) => {
+      const r = rank(a) - rank(b);
+      if (r) return r;
+      const ea = expiryInfo(a), eb = expiryInfo(b);
+      if (ea && eb) return ea.days - eb.days;
+      return a.category.localeCompare(b.category, "ja");
+    });
 
   let h = '<section><label class="field"><span class="label">絞り込み</span>' +
     '<input class="input" id="qList" value="' + esc(query.list) + '" placeholder="品名・置き場所で探す"></label>' +
     '<div class="chips" style="margin-bottom:16px">' +
-    [["all","すべて"],["low","そろそろ"],["ok","在庫あり"]].map(([v,l]) =>
+    [["all","すべて"],["low","そろそろ"],["exp","期限間近"],["ok","在庫あり"]].map(([v,l]) =>
       '<button class="chip" data-filter="' + v + '" aria-pressed="' + (filter === v) + '">' + l + '</button>').join("") +
     '</div><div id="results">';
 
@@ -313,9 +388,10 @@ function listScreen() {
     h += shown.map(i => {
       const isOpen = openId === i.id;
       return '<div class="card' + (i.status === "low" ? " is-low" : "") + '"><div class="card-main"><div class="grow">' +
-        '<div class="name">' + esc(i.name) + '</div>' +
+        '<div class="name">' + esc(i.name) + expiryPill(i) + '</div>' +
         '<div class="meta">' + esc(i.category) +
-          (i.status === "low" ? '／そろそろ（' + daysSince(i.lowAt) + '日前）' : '／前回 ' + fmtDate(i.lastBoughtAt)) + '</div></div>' +
+          (i.status === "low" ? '／そろそろ（' + daysSince(i.lowAt) + '日前）' : '／前回 ' + fmtDate(i.lastBoughtAt)) +
+          expiryMeta(i) + '</div></div>' +
         (i.status === "low"
           ? '<button class="btn go sm" data-buy="' + i.id + '">買ったよ</button>'
           : '<button class="btn warn sm" data-low="' + i.id + '">そろそろ</button>') +
@@ -333,6 +409,9 @@ function listScreen() {
 function render() {
   $("#cAll").textContent = items.length;
   $("#cLow").textContent = lowItems().length;
+  const nExp = items.filter(i => { const e = expiryInfo(i); return e && e.level !== "ok"; }).length;
+  $("#cExp").textContent = nExp;
+  $("#cExpWrap").hidden = nExp === 0;
   $("#tabs").innerHTML = tabsHtml();
   $("#panel").innerHTML =
     tab === "add" ? addScreen() : tab === "low" ? lowScreen() : tab === "buy" ? buyScreen() : listScreen();
@@ -345,11 +424,13 @@ function goTab(id) { tab = id; toast = ""; openId = null; editId = null; confirm
 function submitAdd() {
   const name = $("#aName").value.trim();
   if (!name) return;
+  const exp = $("#aExpiry");
   items.unshift({ id: uid(), name: name, category: addDraft.category,
     place: $("#aPlace").value.trim(), memo: $("#aMemo").value.trim(),
+    expiry: hasExpiry(addDraft.category) && exp ? exp.value : "",
     status: "ok", lowAt: null, lastBoughtAt: null, buyCount: 0 });
   toast = name;
-  addDraft = { name: "", category: addDraft.category, place: "", memo: "" };
+  addDraft = { name: "", category: addDraft.category, place: "", memo: "", expiry: "" };
   save(); render();
   const el = $("#aName"); if (el) el.focus();
 }
@@ -358,6 +439,8 @@ function saveEdit(id) {
   const it = find(id); if (!it) return;
   const n = $("#eName").value.trim(); if (!n) return;
   it.name = n; it.place = $("#ePlace").value.trim(); it.memo = $("#eMemo").value.trim();
+  const exp = $("#eExpiry");
+  it.expiry = hasExpiry(it.category) && exp ? exp.value : "";
   editId = null; commit();
 }
 
@@ -389,8 +472,26 @@ document.addEventListener("click", (e) => {
   const d = t.dataset;
   if (d.tab) return goTab(d.tab);
   if (d.go) return goTab(d.go);
-  if (d.acat) { addDraft.category = d.acat; addDraft.name = $("#aName").value; addDraft.place = $("#aPlace").value; addDraft.memo = $("#aMemo").value; return render(); }
-  if (d.ecat) { const it = find(editId); if (it) { it.category = d.ecat; save(); render(); } return; }
+  if (d.acat) {
+    addDraft.name = $("#aName").value; addDraft.place = $("#aPlace").value; addDraft.memo = $("#aMemo").value;
+    const ex = $("#aExpiry"); if (ex) addDraft.expiry = ex.value;
+    addDraft.category = d.acat;
+    if (!hasExpiry(d.acat)) addDraft.expiry = "";
+    return render();
+  }
+  if (d.ecat) {
+    const it = find(editId);
+    if (it) {
+      const n = $("#eName"); if (n && n.value.trim()) it.name = n.value.trim();
+      const p = $("#ePlace"); if (p) it.place = p.value.trim();
+      const m = $("#eMemo"); if (m) it.memo = m.value.trim();
+      const ex = $("#eExpiry"); if (ex) it.expiry = ex.value;
+      it.category = d.ecat;
+      if (!hasExpiry(d.ecat)) it.expiry = "";
+      save(); render();
+    }
+    return;
+  }
   if (t.id === "aSubmit") return submitAdd();
   if (d.low) return markLow(d.low);
   if (d.unlow) return unmarkLow(d.unlow);
