@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>日用品ストック</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#16202b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="日用品ストック">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<link rel="icon" href="./icon-192.png">
+<style>
+* { box-sizing: border-box; }
+:root {
+  --ink: #16202b;
+  --ink2: #34434f;
+  --muted: #78868f;
+  --paper: #e6ebee;
+  --card: #ffffff;
+  --line: #ccd6db;
+  --signal: #f2b705;
+  --signal-ink: #6b4e00;
+  --go: #1c6b50;
+  --stamp: #bd3529;
+  --font: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", system-ui, sans-serif;
+  --mono: ui-monospace, "SF Mono", "Roboto Mono", monospace;
+}
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: var(--font); color: var(--ink); background: var(--paper);
+  min-height: 100vh; -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+
+.shell { max-width: 780px; margin: 0 auto; padding: 0 16px 112px; }
+.head { padding: calc(20px + env(safe-area-inset-top)) 0 14px; }
+.title { font-size: 25px; font-weight: 800; letter-spacing: .04em; margin: 0; }
+.counts { display: flex; gap: 18px; margin-top: 10px; font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.counts b { font-size: 15px; color: var(--ink); font-weight: 700; margin-left: 5px; }
+.counts .hot b { color: var(--signal-ink); }
+
+.tabs {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: flex;
+  background: var(--card); border-top: 1px solid var(--line);
+  padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+}
+.tab {
+  flex: 1; background: none; border: 0; cursor: pointer; border-radius: 8px;
+  padding: 9px 2px 8px; font-size: 12.5px; font-weight: 700; color: var(--muted);
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+}
+.tab[aria-current="true"] { color: var(--ink); background: var(--paper); }
+.tab .rule { width: 20px; height: 3px; border-radius: 2px; background: transparent; }
+.tab[aria-current="true"] .rule { background: var(--ink); }
+.tab .lab { display: flex; align-items: center; gap: 5px; }
+.badge { font-family: var(--mono); font-size: 10.5px; font-weight: 700; line-height: 1;
+  background: var(--signal); color: var(--signal-ink); border-radius: 999px; padding: 3px 6px; }
+
+@media (min-width: 720px) {
+  .tabs { position: static; border: 0; background: none; padding: 0; gap: 6px; margin-top: 16px; }
+  .tab { flex: 0 0 auto; padding: 8px 16px; border: 1px solid var(--line); background: var(--card); border-radius: 3px; }
+  .tab[aria-current="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .tab[aria-current="true"] .rule { background: transparent; }
+  .shell { padding-bottom: 48px; }
+}
+
+.panel { padding-top: 18px; }
+.lede { font-size: 13px; color: var(--muted); line-height: 1.7; margin: 0 0 14px; }
+.field { display: block; margin-bottom: 14px; }
+.label { display: block; font-family: var(--mono); font-size: 11px; letter-spacing: .08em; color: var(--muted); margin-bottom: 6px; }
+.input, .area { width: 100%; background: var(--card); border: 1px solid var(--line); border-radius: 3px; padding: 12px; font-size: 16px; }
+.area { resize: vertical; min-height: 68px; }
+.chips { display: flex; flex-wrap: wrap; gap: 7px; }
+.chip { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 7px 13px; font-size: 13px; cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+.btn { border: 0; border-radius: 3px; padding: 13px 18px; font-size: 15px; font-weight: 700; cursor: pointer; background: var(--ink); color: #fff; }
+.btn:disabled { opacity: .35; cursor: not-allowed; }
+.btn.wide { width: 100%; }
+.btn.ghost { background: none; color: var(--ink2); border: 1px solid var(--line); }
+.btn.warn { background: var(--signal); color: var(--signal-ink); }
+.btn.go { background: var(--go); }
+.btn.danger { background: var(--stamp); }
+.btn.sm { padding: 8px 13px; font-size: 13px; }
+.toast { margin-top: 12px; font-size: 13px; font-weight: 700; color: var(--go); font-family: var(--mono); }
+
+.card { position: relative; background: var(--card); border: 1px solid var(--line); border-radius: 3px; margin-bottom: 9px; overflow: hidden; }
+.card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 9px; background: var(--line); }
+.card.is-low::before { background: repeating-linear-gradient(45deg, var(--signal) 0 6px, #2a2314 6px 12px); }
+.card-main { display: flex; align-items: center; gap: 12px; padding: 13px 13px 13px 22px; }
+.name { font-size: 16px; font-weight: 700; line-height: 1.35; }
+.meta { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 4px; }
+.memo { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+.grow { flex: 1; min-width: 0; }
+.stack { display: flex; flex-direction: column; gap: 6px; }
+.open { background: none; border: 0; cursor: pointer; padding: 6px; color: var(--muted); font-size: 12px; }
+
+.detail { border-top: 1px dashed var(--line); padding: 13px 13px 15px 22px; background: #fbfcfc; }
+.dl { display: grid; grid-template-columns: 76px 1fr; gap: 6px 12px; font-size: 13px; margin: 0 0 12px; }
+.dl dt { font-family: var(--mono); font-size: 11px; color: var(--muted); padding-top: 2px; }
+.dl dd { margin: 0; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.empty { border: 1px dashed var(--line); border-radius: 3px; padding: 30px 20px; text-align: center; color: var(--muted); font-size: 13.5px; line-height: 1.8; background: rgba(255,255,255,.5); }
+.empty b { display: block; color: var(--ink); font-size: 15px; margin-bottom: 6px; }
+.group { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; color: var(--muted); margin: 20px 0 8px; padding-bottom: 5px; border-bottom: 1px solid var(--line); }
+
+.stamp { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; }
+.stamp span {
+  width: 88px; height: 88px; border: 4px solid var(--stamp); color: var(--stamp); border-radius: 50%;
+  display: grid; place-items: center; font-size: 30px; font-weight: 800; background: rgba(255,255,255,.86);
+  animation: stamp 460ms cubic-bezier(.2,.85,.25,1) forwards;
+}
+@keyframes stamp {
+  0% { opacity: 0; transform: rotate(-34deg) scale(2.3); }
+  55% { opacity: 1; transform: rotate(-13deg) scale(.94); }
+  100% { opacity: 1; transform: rotate(-13deg) scale(1); }
+}
+.collapsing { animation: collapse 300ms ease forwards; }
+@keyframes collapse { to { opacity: 0; max-height: 0; margin-bottom: 0; padding: 0; border-width: 0; transform: translateX(14px); } }
+
+.backup { margin-top: 28px; padding-top: 16px; border-top: 1px solid var(--line); }
+.backup p { font-size: 12px; color: var(--muted); line-height: 1.7; margin: 0 0 10px; }
+
+@media (prefers-reduced-motion: reduce) { *, *::before { animation-duration: 1ms !important; transition-duration: 1ms !important; } }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="head">
+    <h1 class="title">日用品ストック</h1>
+    <div class="counts">
+      <span>登録<b id="cAll">0</b></span>
+      <span class="hot">そろそろ<b id="cLow">0</b></span>
+    </div>
+    <nav class="tabs" id="tabs"></nav>
+  </header>
+  <main class="panel" id="panel"></main>
+</div>
+<input type="file" id="importFile" accept="application/json" hidden>
+
+<script>
+"use strict";
+const KEY = "nichiyohin:items:v1";
+const CATEGORIES = ["キッチン","バス・トイレ","洗濯","掃除","衛生・ケア","紙もの","その他"];
+const TABS = [["list","一覧"],["add","新規登録"],["low","そろそろ"],["buy","買うもの"]];
+
+let items = [];
+let tab = "list";
+let openId = null;
+let editId = null;
+let confirmId = null;
+let toast = "";
+let addDraft = { name: "", category: CATEGORIES[0], place: "", memo: "" };
+let query = { list: "", low: "" };
+let filter = "all";
+
+const $ = (s) => document.querySelector(s);
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const fmtDate = (ts) => { if (!ts) return "未記録"; const d = new Date(ts);
+  return d.getFullYear() + "." + String(d.getMonth()+1).padStart(2,"0") + "." + String(d.getDate()).padStart(2,"0"); };
+const daysSince = (ts) => (ts ? Math.floor((Date.now() - ts) / 86400000) : null);
+
+function load() {
+  try { const raw = localStorage.getItem(KEY); const p = raw ? JSON.parse(raw) : []; if (Array.isArray(p)) items = p; }
+  catch (e) { items = []; }
+}
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(items)); }
+  catch (e) { alert("保存できませんでした。端末の空き容量を確認してください。"); }
+}
+function commit() { save(); render(); }
+
+function lowItems() { return items.filter(i => i.status === "low").sort((a,b) => (a.lowAt||0) - (b.lowAt||0)); }
+function find(id) { return items.find(i => i.id === id); }
+function markLow(id) { const it = find(id); if (it) { it.status = "low"; it.lowAt = Date.now(); commit(); } }
+function unmarkLow(id) { const it = find(id); if (it) { it.status = "ok"; it.lowAt = null; commit(); } }
+function bought(id) { const it = find(id); if (it) { it.status = "ok"; it.lowAt = null; it.lastBoughtAt = Date.now(); it.buyCount = (it.buyCount||0) + 1; commit(); } }
+function removeItem(id) { items = items.filter(i => i.id !== id); confirmId = null; openId = null; commit(); }
+
+/* ---------- 画面 ---------- */
+
+function tabsHtml() {
+  const n = lowItems().length;
+  return TABS.map(([id,label]) =>
+    '<button class="tab" data-tab="' + id + '" aria-current="' + (tab === id) + '">' +
+      '<span class="lab">' + label + (id === "buy" && n ? '<span class="badge">' + n + '</span>' : "") + '</span>' +
+      '<span class="rule"></span></button>').join("");
+}
+
+function emptyBox(title, body, btn, target) {
+  return '<div class="empty"><b>' + title + '</b>' + body +
+    (btn ? '<div style="margin-top:16px"><button class="btn sm" data-go="' + target + '">' + btn + '</button></div>' : "") + '</div>';
+}
+
+function chipsHtml(sel, attr) {
+  return '<div class="chips">' + CATEGORIES.map(c =>
+    '<button class="chip" ' + attr + '="' + esc(c) + '" aria-pressed="' + (sel === c) + '">' + esc(c) + '</button>').join("") + '</div>';
+}
+
+function addScreen() {
+  return '<section>' +
+    '<p class="lede">切らしたくない日用品を登録します。登録したものが管理対象になります。</p>' +
+    '<label class="field"><span class="label">品名</span>' +
+      '<input class="input" id="aName" value="' + esc(addDraft.name) + '" placeholder="トイレットペーパー"></label>' +
+    '<div class="field"><span class="label">カテゴリ</span>' + chipsHtml(addDraft.category, "data-acat") + '</div>' +
+    '<label class="field"><span class="label">置き場所（任意）</span>' +
+      '<input class="input" id="aPlace" value="' + esc(addDraft.place) + '" placeholder="洗面台の下"></label>' +
+    '<label class="field"><span class="label">メモ（任意）</span>' +
+      '<textarea class="area" id="aMemo" placeholder="いつもの銘柄、詰め替え用12個入りなど">' + esc(addDraft.memo) + '</textarea></label>' +
+    '<button class="btn wide" id="aSubmit">登録する</button>' +
+    (toast ? '<p class="toast">「' + esc(toast) + '」を登録しました。続けて登録できます。</p>' : "") +
+    '</section>';
+}
+
+function lowScreen() {
+  if (!items.length) return emptyBox("まだ何も登録されていません",
+    "先に日用品を登録すると、ここでなくなりそうなものを選べます。", "新規登録へ", "add");
+  const q = query.low.trim().toLowerCase();
+  const low = items.filter(i => i.status === "low");
+  const stock = items.filter(i => i.status === "ok" &&
+    (i.name + i.category + (i.place||"")).toLowerCase().includes(q));
+
+  let h = '<section><p class="lede">残りが少ないと気づいたら、ここで「そろそろ」に入れます。入れたものは買うものリストに並びます。</p>' +
+    '<label class="field"><span class="label">絞り込み</span>' +
+    '<input class="input" id="qLow" value="' + esc(query.low) + '" placeholder="品名で探す"></label><div id="results">';
+
+  if (low.length) {
+    h += '<div class="group">そろそろ登録ずみ ' + low.length + '</div>';
+    h += low.map(i => '<div class="card is-low"><div class="card-main"><div class="grow">' +
+      '<div class="name">' + esc(i.name) + '</div>' +
+      '<div class="meta">' + esc(i.category) + '／' + daysSince(i.lowAt) + '日前に登録</div></div>' +
+      '<button class="btn ghost sm" data-unlow="' + i.id + '">取り消す</button></div></div>').join("");
+  }
+
+  const groups = CATEGORIES.map(c => [c, stock.filter(i => i.category === c)]).filter(g => g[1].length);
+  if (!groups.length) {
+    h += '<div class="empty" style="margin-top:20px">該当する日用品がありません。別の言葉で探すか、新しく登録してください。</div>';
+  } else {
+    h += groups.map(([cat, arr]) => '<div class="group">' + esc(cat) + '</div>' + arr.map(i =>
+      '<div class="card"><div class="card-main"><div class="grow">' +
+      '<div class="name">' + esc(i.name) + '</div>' +
+      '<div class="meta">' + (i.place ? esc(i.place) + "／" : "") + '前回 ' + fmtDate(i.lastBoughtAt) + '</div></div>' +
+      '<button class="btn warn sm" data-low="' + i.id + '">そろそろ</button></div></div>').join("")).join("");
+  }
+  return h + '</div></section>';
+}
+
+function buyScreen() {
+  const list = lowItems();
+  if (!list.length) return emptyBox("買うものはありません",
+    "なくなりそうなものが出たら「そろそろ」に登録すると、ここに並びます。", "そろそろ登録へ", "low");
+  return '<section><p class="lede">買い物中に開く画面です。かごに入れたら「買ったよ」を押すと、そろそろの印が消えます。</p>' +
+    list.map(i => {
+      const d = daysSince(i.lastBoughtAt);
+      return '<div class="card is-low" data-card="' + i.id + '"><div class="card-main"><div class="grow">' +
+        '<div class="name">' + esc(i.name) + '</div>' +
+        '<div class="meta">' + esc(i.category) + '／前回 ' + fmtDate(i.lastBoughtAt) + (d !== null ? "（" + d + "日前）" : "") + '</div>' +
+        (i.memo ? '<div class="memo">' + esc(i.memo) + '</div>' : "") + '</div>' +
+        '<div class="stack">' +
+        '<button class="btn go sm" data-buy="' + i.id + '">買ったよ</button>' +
+        '<button class="btn ghost sm" data-unlow="' + i.id + '">戻す</button></div></div></div>';
+    }).join("") + '</section>';
+}
+
+function detailHtml(i) {
+  if (editId === i.id) {
+    return '<div class="detail">' +
+      '<label class="field"><span class="label">品名</span><input class="input" id="eName" value="' + esc(i.name) + '"></label>' +
+      '<div class="field"><span class="label">カテゴリ</span>' + chipsHtml(i.category, "data-ecat") + '</div>' +
+      '<label class="field"><span class="label">置き場所</span><input class="input" id="ePlace" value="' + esc(i.place||"") + '"></label>' +
+      '<label class="field"><span class="label">メモ</span><textarea class="area" id="eMemo">' + esc(i.memo||"") + '</textarea></label>' +
+      '<div class="row"><button class="btn sm" data-savee="' + i.id + '">保存する</button>' +
+      '<button class="btn ghost sm" data-cancele="1">やめる</button></div></div>';
+  }
+  return '<div class="detail"><dl class="dl">' +
+    '<dt>置き場所</dt><dd>' + (i.place ? esc(i.place) : "未設定") + '</dd>' +
+    '<dt>メモ</dt><dd>' + (i.memo ? esc(i.memo) : "なし") + '</dd>' +
+    '<dt>前回購入</dt><dd>' + fmtDate(i.lastBoughtAt) + '</dd>' +
+    '<dt>購入回数</dt><dd>' + (i.buyCount||0) + ' 回</dd></dl><div class="row">' +
+    '<button class="btn ghost sm" data-edit="' + i.id + '">編集する</button>' +
+    (i.status === "low" ? '<button class="btn ghost sm" data-unlow="' + i.id + '">そろそろを取り消す</button>' : "") +
+    (confirmId === i.id
+      ? '<button class="btn danger sm" data-del="' + i.id + '">削除する</button><button class="btn ghost sm" data-nodel="1">やめる</button>'
+      : '<button class="btn ghost sm" data-confirm="' + i.id + '">管理から外す</button>') +
+    '</div></div>';
+}
+
+function listScreen() {
+  if (!items.length) return emptyBox("まだ何も登録されていません",
+    "よく使う日用品を登録すると、ここに並びます。", "新規登録へ", "add");
+  const q = query.list.trim().toLowerCase();
+  const shown = items
+    .filter(i => filter === "all" ? true : filter === "low" ? i.status === "low" : i.status === "ok")
+    .filter(i => (i.name + i.category + (i.place||"") + (i.memo||"")).toLowerCase().includes(q))
+    .sort((a,b) => a.status === b.status ? a.category.localeCompare(b.category, "ja") : (a.status === "low" ? -1 : 1));
+
+  let h = '<section><label class="field"><span class="label">絞り込み</span>' +
+    '<input class="input" id="qList" value="' + esc(query.list) + '" placeholder="品名・置き場所で探す"></label>' +
+    '<div class="chips" style="margin-bottom:16px">' +
+    [["all","すべて"],["low","そろそろ"],["ok","在庫あり"]].map(([v,l]) =>
+      '<button class="chip" data-filter="' + v + '" aria-pressed="' + (filter === v) + '">' + l + '</button>').join("") +
+    '</div><div id="results">';
+
+  if (!shown.length) {
+    h += '<div class="empty">該当する日用品がありません。別の言葉で探してください。</div>';
+  } else {
+    h += shown.map(i => {
+      const isOpen = openId === i.id;
+      return '<div class="card' + (i.status === "low" ? " is-low" : "") + '"><div class="card-main"><div class="grow">' +
+        '<div class="name">' + esc(i.name) + '</div>' +
+        '<div class="meta">' + esc(i.category) +
+          (i.status === "low" ? '／そろそろ（' + daysSince(i.lowAt) + '日前）' : '／前回 ' + fmtDate(i.lastBoughtAt)) + '</div></div>' +
+        (i.status === "low"
+          ? '<button class="btn go sm" data-buy="' + i.id + '">買ったよ</button>'
+          : '<button class="btn warn sm" data-low="' + i.id + '">そろそろ</button>') +
+        '<button class="open" data-open="' + i.id + '" aria-expanded="' + isOpen + '">' + (isOpen ? "閉じる" : "詳細") + '</button>' +
+        '</div>' + (isOpen ? detailHtml(i) : "") + '</div>';
+    }).join("");
+  }
+
+  h += '</div><div class="backup"><p>データはこの端末の中だけに保存されています。念のため、ときどき書き出しておくと安心です。</p>' +
+    '<div class="row"><button class="btn ghost sm" id="expBtn">書き出す</button>' +
+    '<button class="btn ghost sm" id="impBtn">読み込む</button></div></div></section>';
+  return h;
+}
+
+function render() {
+  $("#cAll").textContent = items.length;
+  $("#cLow").textContent = lowItems().length;
+  $("#tabs").innerHTML = tabsHtml();
+  $("#panel").innerHTML =
+    tab === "add" ? addScreen() : tab === "low" ? lowScreen() : tab === "buy" ? buyScreen() : listScreen();
+}
+
+/* ---------- 操作 ---------- */
+
+function goTab(id) { tab = id; toast = ""; openId = null; editId = null; confirmId = null; render(); }
+
+function submitAdd() {
+  const name = $("#aName").value.trim();
+  if (!name) return;
+  items.unshift({ id: uid(), name: name, category: addDraft.category,
+    place: $("#aPlace").value.trim(), memo: $("#aMemo").value.trim(),
+    status: "ok", lowAt: null, lastBoughtAt: null, buyCount: 0 });
+  toast = name;
+  addDraft = { name: "", category: addDraft.category, place: "", memo: "" };
+  save(); render();
+  const el = $("#aName"); if (el) el.focus();
+}
+
+function saveEdit(id) {
+  const it = find(id); if (!it) return;
+  const n = $("#eName").value.trim(); if (!n) return;
+  it.name = n; it.place = $("#ePlace").value.trim(); it.memo = $("#eMemo").value.trim();
+  editId = null; commit();
+}
+
+function exportData() {
+  const blob = new Blob([JSON.stringify(items, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "nichiyohin-" + new Date().toISOString().slice(0,10) + ".json";
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+function importData(file) {
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const p = JSON.parse(r.result);
+      if (!Array.isArray(p)) throw new Error("bad");
+      if (!confirm("読み込むと今の登録内容は置き換わります。続けますか？")) return;
+      items = p; commit();
+    } catch (e) { alert("読み込めませんでした。書き出したJSONファイルを選んでください。"); }
+  };
+  r.readAsText(file);
+}
+
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("button");
+  if (!t) return;
+  const d = t.dataset;
+  if (d.tab) return goTab(d.tab);
+  if (d.go) return goTab(d.go);
+  if (d.acat) { addDraft.category = d.acat; addDraft.name = $("#aName").value; addDraft.place = $("#aPlace").value; addDraft.memo = $("#aMemo").value; return render(); }
+  if (d.ecat) { const it = find(editId); if (it) { it.category = d.ecat; save(); render(); } return; }
+  if (t.id === "aSubmit") return submitAdd();
+  if (d.low) return markLow(d.low);
+  if (d.unlow) return unmarkLow(d.unlow);
+  if (d.buy) {
+    const card = document.querySelector('[data-card="' + d.buy + '"]');
+    if (card) {
+      card.insertAdjacentHTML("beforeend", '<div class="stamp"><span>済</span></div>');
+      card.classList.add("collapsing");
+      setTimeout(() => bought(d.buy), 700);
+    } else { bought(d.buy); }
+    return;
+  }
+  if (d.open) { openId = openId === d.open ? null : d.open; editId = null; confirmId = null; return render(); }
+  if (d.edit) { editId = d.edit; return render(); }
+  if (d.savee) return saveEdit(d.savee);
+  if (d.cancele) { editId = null; return render(); }
+  if (d.confirm) { confirmId = d.confirm; return render(); }
+  if (d.nodel) { confirmId = null; return render(); }
+  if (d.del) return removeItem(d.del);
+  if (d.filter) { filter = d.filter; return render(); }
+  if (t.id === "expBtn") return exportData();
+  if (t.id === "impBtn") return $("#importFile").click();
+});
+
+document.addEventListener("input", (e) => {
+  if (e.target.id === "qList") { query.list = e.target.value; $("#results").outerHTML = listResults(); }
+  if (e.target.id === "qLow") { query.low = e.target.value; $("#results").outerHTML = lowResults(); }
+});
+
+function listResults() { const w = document.createElement("div"); w.innerHTML = listScreen(); return w.querySelector("#results").outerHTML; }
+function lowResults() { const w = document.createElement("div"); w.innerHTML = lowScreen(); return w.querySelector("#results").outerHTML; }
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && e.target.id === "aName") { e.preventDefault(); submitAdd(); }
+});
+
+$("#importFile").addEventListener("change", (e) => {
+  if (e.target.files && e.target.files[0]) importData(e.target.files[0]);
+  e.target.value = "";
+});
+
+load();
+render();
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {}));
+}
+</script>
+</body>
+</html>
