@@ -154,9 +154,11 @@ button, input, select, textarea { font: inherit; color: inherit; }
 <script>
 "use strict";
 const KEY = "nichiyohin:items:v1";
-const CATEGORIES = ["食品","飲みもの","キッチン","バス・トイレ","洗濯","掃除","衛生・ケア","紙もの","その他"];
-const DATED = ["食品"];
+const CATEGORIES = ["食料品","キッチン","バス・トイレ","洗濯","掃除","衛生・ケア","紙もの","その他"];
+const DATED = ["食料品"];
 const hasExpiry = (cat) => DATED.indexOf(cat) >= 0;
+// 旧カテゴリ名の読み替え。登録済みのものが迷子にならないよう、読み込み時に付け替える
+const RENAMED = { "食品": "食料品", "飲みもの": "食料品", "飲み物": "食料品" };
 const TABS = [["list","一覧"],["add","新規登録"],["low","そろそろ"],["buy","買うもの"]];
 
 let items = [];
@@ -203,9 +205,19 @@ function expiryMeta(item) {
   return e ? '／期限 ' + e.date + '（' + e.text + '）' : "";
 }
 
+function normalize() {
+  let changed = false;
+  items.forEach(i => {
+    if (RENAMED[i.category]) { i.category = RENAMED[i.category]; changed = true; }
+    if (CATEGORIES.indexOf(i.category) < 0) { i.category = "その他"; changed = true; }
+    if (!hasExpiry(i.category) && i.expiry) { i.expiry = ""; changed = true; }
+  });
+  return changed;
+}
 function load() {
   try { const raw = localStorage.getItem(KEY); const p = raw ? JSON.parse(raw) : []; if (Array.isArray(p)) items = p; }
   catch (e) { items = []; }
+  if (normalize()) save();
 }
 function save() {
   try { localStorage.setItem(KEY, JSON.stringify(items)); }
@@ -460,7 +472,7 @@ function importData(file) {
       const p = JSON.parse(r.result);
       if (!Array.isArray(p)) throw new Error("bad");
       if (!confirm("読み込むと今の登録内容は置き換わります。続けますか？")) return;
-      items = p; commit();
+      items = p; normalize(); commit();
     } catch (e) { alert("読み込めませんでした。書き出したJSONファイルを選んでください。"); }
   };
   r.readAsText(file);
