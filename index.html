@@ -37,12 +37,14 @@
 html, body { margin: 0; padding: 0; }
 body {
   font-family: var(--font); color: var(--ink); background: var(--paper);
-  min-height: 100vh; -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent;
 }
 button, input, select, textarea { font: inherit; color: inherit; }
 :focus-visible { outline: 3px solid var(--green); outline-offset: 2px; }
 
-.shell { max-width: 780px; margin: 0 auto; padding: 0 16px 118px; }
+/* 下端の余白は、実際のタブバーの高さをJSで測って --tabh に入れる。
+   決め打ちだと機種によって余りすぎたり足りなかったりするため。 */
+.shell { max-width: 780px; margin: 0 auto; padding: 0 16px calc(var(--tabh, 62px) + 20px); }
 .head { padding: calc(20px + env(safe-area-inset-top)) 0 12px; }
 .title { font-size: 24px; font-weight: 800; letter-spacing: .03em; margin: 0; display: flex; align-items: center; gap: 8px; }
 .title .leaf { width: 22px; height: 22px; flex: none; }
@@ -88,6 +90,32 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 .input:focus, .area:focus, .sel:focus { border-color: var(--green); outline: none; }
 .area { resize: vertical; min-height: 68px; }
+
+/* iOSの日付欄。幅がはみ出さないようにし、
+   タップしたときにカレンダーが下に隠れないよう余白を確保する */
+input[type="date"] {
+  -webkit-appearance: none; appearance: none;
+  min-width: 0; max-width: 100%; min-height: 48px; text-align: left;
+}
+.input, .area, .sel { scroll-margin-top: 72px; scroll-margin-bottom: calc(var(--tabh, 62px) + 24px); }
+
+/* 開閉できる補足欄 */
+.disclose {
+  background: none; border: 0; cursor: pointer; padding: 8px 0; margin-bottom: 6px;
+  font-size: 13px; font-weight: 700; color: var(--green-deep);
+}
+.disclose::before { content: "▸ "; }
+.disclose[aria-expanded="true"]::before { content: "▾ "; }
+
+/* iPhone SEのような狭い画面では、縦の間隔を詰める */
+@media (max-width: 400px) {
+  .head { padding-top: calc(14px + env(safe-area-inset-top)); padding-bottom: 10px; }
+  .panel { padding-top: 14px; }
+  .lede { margin-bottom: 12px; }
+  .field { margin-bottom: 12px; }
+  .chip { padding: 6px 11px; font-size: 12.5px; }
+  .chips { gap: 6px; }
+}
 .chips { display: flex; flex-wrap: wrap; gap: 7px; }
 .chip {
   border: 2px solid var(--line); background: var(--card); border-radius: 999px;
@@ -222,7 +250,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 <script>
 "use strict";
 const KEY = "nichiyohin:items:v1";
-const APP_VERSION = "2026.08.11-4";
+const APP_VERSION = "2026.08.11-5";
 const CATEGORIES = ["食料品","キッチン","バス・トイレ","洗濯","掃除","衛生・ケア","紙もの","その他"];
 const DATED = ["食料品"];
 const hasExpiry = (cat) => DATED.indexOf(cat) >= 0;
@@ -234,6 +262,7 @@ let tab = "list";
 let openId = null, editId = null, confirmId = null, askExpiryId = null;
 let toast = "", quickMsg = "";
 let addDraft = { name: "", category: CATEGORIES[0], place: "", memo: "", expiry: "" };
+let addMore = false;   // 登録画面の「置き場所とメモ」を開いているか
 let quickCat = { want: "その他", buy: "食料品" };
 let query = { list: "", low: "" };
 let filter = "all";
@@ -399,10 +428,14 @@ function addScreen() {
         '<input class="input" type="date" id="aExpiry" value="' + esc(addDraft.expiry) + '">' +
         '<span class="hint">入れておくと、期限が近いものが一覧の上に出ます。空のままでも登録できます。</span></label>'
       : "") +
-    '<label class="field"><span class="label">置き場所（任意）</span>' +
-      '<input class="input" id="aPlace" value="' + esc(addDraft.place) + '" placeholder="洗面台の下"></label>' +
-    '<label class="field"><span class="label">メモ（任意）</span>' +
-      '<textarea class="area" id="aMemo" placeholder="いつもの銘柄、詰め替え用12個入りなど">' + esc(addDraft.memo) + '</textarea></label>' +
+    '<button class="disclose" id="aMore" aria-expanded="' + addMore + '">置き場所とメモ' +
+      (!addMore && (addDraft.place || addDraft.memo) ? '（入力あり）' : '') + '</button>' +
+    (addMore
+      ? '<label class="field"><span class="label">置き場所（任意）</span>' +
+          '<input class="input" id="aPlace" value="' + esc(addDraft.place) + '" placeholder="洗面台の下"></label>' +
+        '<label class="field"><span class="label">メモ（任意）</span>' +
+          '<textarea class="area" id="aMemo" placeholder="いつもの銘柄、詰め替え用12個入りなど">' + esc(addDraft.memo) + '</textarea></label>'
+      : "") +
     '<button class="btn wide" id="aSubmit">登録する</button>' +
     (toast ? '<p class="toast">「' + esc(toast) + '」を登録しました。つづけて登録できます。</p>' : "") +
     '</section>';
@@ -630,13 +663,21 @@ function render() {
 
 function goTab(id) { tab = id; toast = ""; quickMsg = ""; openId = null; editId = null; confirmId = null; render(); }
 
+/* 画面に出ている入力だけを下書きへ写す。畳まれている欄は前の値のまま残す */
+function readAddForm() {
+  const n = $("#aName");   if (n) addDraft.name = n.value;
+  const p = $("#aPlace");  if (p) addDraft.place = p.value;
+  const m = $("#aMemo");   if (m) addDraft.memo = m.value;
+  const e = $("#aExpiry"); if (e) addDraft.expiry = e.value;
+}
+
 function submitAdd() {
-  const name = $("#aName").value.trim();
+  readAddForm();
+  const name = addDraft.name.trim();
   if (!name) return;
-  const exp = $("#aExpiry");
   items.unshift({ id: uid(), name: name, category: addDraft.category,
-    place: $("#aPlace").value.trim(), memo: $("#aMemo").value.trim(),
-    expiry: hasExpiry(addDraft.category) && exp ? exp.value : "",
+    place: addDraft.place.trim(), memo: addDraft.memo.trim(),
+    expiry: hasExpiry(addDraft.category) ? addDraft.expiry : "",
     status: "ok", prev: "ok", lowAt: null, wantAt: null, lastBoughtAt: null, buyCount: 0 });
   toast = name;
   addDraft = { name: "", category: addDraft.category, place: "", memo: "", expiry: "" };
@@ -685,12 +726,12 @@ document.addEventListener("click", (e) => {
   if (d.go) return goTab(d.go);
 
   if (d.acat) {
-    addDraft.name = $("#aName").value; addDraft.place = $("#aPlace").value; addDraft.memo = $("#aMemo").value;
-    const ex = $("#aExpiry"); if (ex) addDraft.expiry = ex.value;
+    readAddForm();
     addDraft.category = d.acat;
     if (!hasExpiry(d.acat)) addDraft.expiry = "";
     return render();
   }
+  if (t.id === "aMore") { readAddForm(); addMore = !addMore; return render(); }
   if (d.ecat) {
     const it = find(editId);
     if (it) {
@@ -761,8 +802,32 @@ $("#importFile").addEventListener("change", (e) => {
   e.target.value = "";
 });
 
+/* ---------- 画面の高さまわり ---------- */
+
+/* 下端に固定されたタブバーの実際の高さを測って余白に反映する。
+   固定されていない広い画面では余白を足さない。 */
+function syncTabHeight() {
+  const bar = $("#tabs");
+  if (!bar) return;
+  const fixed = getComputedStyle(bar).position === "fixed";
+  document.documentElement.style.setProperty("--tabh", fixed ? bar.offsetHeight + "px" : "0px");
+}
+window.addEventListener("resize", syncTabHeight);
+window.addEventListener("orientationchange", () => setTimeout(syncTabHeight, 200));
+
+/* 日付欄はタップするとカレンダーが下に開く。画面下寄りだと隠れるので、
+   いったん中央付近まで送ってから開かせる。 */
+document.addEventListener("focusin", (e) => {
+  const el = e.target;
+  if (!el || el.type !== "date") return;
+  setTimeout(() => {
+    try { el.scrollIntoView({ behavior: "smooth", block: "center" }); } catch (err) { el.scrollIntoView(); }
+  }, 120);
+});
+
 load();
 render();
+syncTabHeight();
 
 /* ---------- 更新まわり ----------
    キャッシュ（アプリ本体の控え）と localStorage（登録した品物）は別の入れもの。
