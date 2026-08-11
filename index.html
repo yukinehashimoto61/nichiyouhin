@@ -162,7 +162,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 <script>
 "use strict";
 const KEY = "nichiyohin:items:v1";
-const APP_VERSION = "2026.08.11";
+const APP_VERSION = "2026.08.11-2";
 const CATEGORIES = ["食料品","キッチン","バス・トイレ","洗濯","掃除","衛生・ケア","紙もの","その他"];
 const DATED = ["食料品"];
 const hasExpiry = (cat) => DATED.indexOf(cat) >= 0;
@@ -368,9 +368,22 @@ function detailHtml(i) {
     '</div></div>';
 }
 
+/* バックアップとバージョンの欄。1件も無いときこそ「読み込む」が要るので、
+   一覧が空でも必ず出す。 */
+function footerHtml() {
+  return '<div class="backup">' +
+    '<p>データはこの端末の中だけに保存されています。念のため、ときどき書き出しておくと安心です。</p>' +
+    '<div class="row"><button class="btn ghost sm" id="expBtn"' + (items.length ? "" : " disabled") + '>書き出す</button>' +
+    '<button class="btn ghost sm" id="impBtn">読み込む</button></div>' +
+    '<p class="hint" style="margin-top:16px">バージョン ' + APP_VERSION + '　' +
+    '／ 最新版が反映されないときは「更新を確認」を押してください。登録した品物のデータは消えません。</p>' +
+    '<div class="row"><button class="btn ghost sm" id="updBtn">更新を確認</button></div></div>';
+}
+
 function listScreen() {
-  if (!items.length) return emptyBox("まだ何も登録されていません",
-    "よく使う日用品を登録すると、ここに並びます。", "新規登録へ", "add");
+  if (!items.length) return '<section>' +
+    emptyBox("まだ何も登録されていません", "よく使う日用品を登録すると、ここに並びます。", "新規登録へ", "add") +
+    footerHtml() + '</section>';
   const q = query.list.trim().toLowerCase();
   // 期限切れ→期限間近→そろそろ→その他 の順に上へ
   const rank = (i) => {
@@ -421,13 +434,7 @@ function listScreen() {
     }).join("");
   }
 
-  h += '</div><div class="backup"><p>データはこの端末の中だけに保存されています。念のため、ときどき書き出しておくと安心です。</p>' +
-    '<div class="row"><button class="btn ghost sm" id="expBtn">書き出す</button>' +
-    '<button class="btn ghost sm" id="impBtn">読み込む</button></div>' +
-    '<p class="hint" style="margin-top:16px">バージョン ' + APP_VERSION + '　' +
-    '／ 最新版が反映されないときは「更新を確認」を押してください。登録した品物のデータは消えません。</p>' +
-    '<div class="row"><button class="btn ghost sm" id="updBtn">更新を確認</button></div>' +
-    '</div></section>';
+  h += '</div>' + footerHtml() + '</section>';
   return h;
 }
 
@@ -484,7 +491,7 @@ function importData(file) {
     try {
       const p = JSON.parse(r.result);
       if (!Array.isArray(p)) throw new Error("bad");
-      if (!confirm("読み込むと今の登録内容は置き換わります。続けますか？")) return;
+      if (items.length && !confirm("読み込むと今の登録内容は置き換わります。続けますか？")) return;
       items = p; normalize(); commit();
     } catch (e) { alert("読み込めませんでした。書き出したJSONファイルを選んでください。"); }
   };
