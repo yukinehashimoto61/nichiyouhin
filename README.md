@@ -1,4 +1,4 @@
-[README.md](https://github.com/user-attachments/files/30927239/README.md)
+[README.md](https://github.com/user-attachments/files/30927385/README.md)
 # 日用品ストック — 設置手順（GitHub Pages）
 
 スマホのホーム画面に置いて使うWebアプリです。データは開いた端末の中だけに保存されます。
@@ -65,7 +65,7 @@ Chromeなど他のブラウザからでは追加できません。必ずSafari�
 
 ### 手順
 
-1. `sw.js` の1行目のキャッシュ名の末尾の数字を1つ増やす（現在は `nichiyohin-v3`）
+1. `sw.js` の1行目のキャッシュ名の末尾の数字を1つ増やす（現在は `nichiyohin-v4`）
 2. 変更した `index.html` と `sw.js` をGitHubに再アップロード
 3. 1〜2分待つ（Pagesの反映待ち）
 4. スマホでアプリを開く
