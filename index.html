@@ -5,178 +5,236 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>日用品ストック</title>
 <link rel="manifest" href="./manifest.webmanifest">
-<meta name="theme-color" content="#16202b">
+<meta name="theme-color" content="#57a773">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="日用品ストック">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
 <link rel="icon" href="./icon-192.png">
 <style>
 * { box-sizing: border-box; }
 :root {
-  --ink: #16202b;
-  --ink2: #34434f;
-  --muted: #78868f;
-  --paper: #e6ebee;
+  --ink: #2f4f3e;
+  --ink2: #4c6c5b;
+  --muted: #8fa89a;
+  --paper: #f1f8f0;
   --card: #ffffff;
-  --line: #ccd6db;
-  --signal: #f2b705;
-  --signal-ink: #6b4e00;
-  --go: #1c6b50;
-  --stamp: #bd3529;
-  --font: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", system-ui, sans-serif;
+  --line: #dcecdc;
+  --green: #57a773;
+  --green-deep: #3f8659;
+  --green-pale: #e8f4e7;
+  --honey: #f7bd57;
+  --honey-ink: #7d5511;
+  --honey-pale: #fdf1d9;
+  --coral: #ef8b76;
+  --pink: #eb9ab8;
+  --pink-ink: #8d3a57;
+  --pink-pale: #fceef3;
+  --shadow: 0 2px 10px rgba(47, 79, 62, .07);
+  --font: "Hiragino Maru Gothic ProN", "Hiragino Maru Gothic Pro", "Yu Gothic", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
   --mono: ui-monospace, "SF Mono", "Roboto Mono", monospace;
 }
 html, body { margin: 0; padding: 0; }
 body {
   font-family: var(--font); color: var(--ink); background: var(--paper);
-  min-height: 100vh; -webkit-font-smoothing: antialiased;
-  -webkit-tap-highlight-color: transparent;
+  min-height: 100vh; -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent;
 }
 button, input, select, textarea { font: inherit; color: inherit; }
-:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+:focus-visible { outline: 3px solid var(--green); outline-offset: 2px; }
 
-.shell { max-width: 780px; margin: 0 auto; padding: 0 16px 112px; }
-.head { padding: calc(20px + env(safe-area-inset-top)) 0 14px; }
-.title { font-size: 25px; font-weight: 800; letter-spacing: .04em; margin: 0; }
-.counts { display: flex; gap: 18px; margin-top: 10px; font-family: var(--mono); font-size: 12px; color: var(--muted); }
-.counts b { font-size: 15px; color: var(--ink); font-weight: 700; margin-left: 5px; }
-.counts .hot b { color: var(--signal-ink); }
-.counts .exp b { color: var(--stamp); }
+.shell { max-width: 780px; margin: 0 auto; padding: 0 16px 118px; }
+.head { padding: calc(20px + env(safe-area-inset-top)) 0 12px; }
+.title { font-size: 24px; font-weight: 800; letter-spacing: .03em; margin: 0; display: flex; align-items: center; gap: 8px; }
+.title .leaf { width: 22px; height: 22px; flex: none; }
+.counts { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+.counts b { font-size: 15px; font-weight: 800; margin-left: 4px; color: var(--ink); }
+.counts .hot b { color: var(--honey-ink); }
+.counts .exp b { color: var(--coral); }
+.counts .want b { color: var(--pink-ink); }
 .counts [hidden] { display: none; }
 
 .tabs {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: flex;
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: flex; gap: 2px;
   background: var(--card); border-top: 1px solid var(--line);
-  padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+  padding: 7px 6px calc(7px + env(safe-area-inset-bottom));
+  box-shadow: 0 -3px 14px rgba(47, 79, 62, .05);
 }
 .tab {
-  flex: 1; background: none; border: 0; cursor: pointer; border-radius: 8px;
-  padding: 9px 2px 8px; font-size: 12.5px; font-weight: 700; color: var(--muted);
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  flex: 1; background: none; border: 0; cursor: pointer; border-radius: 14px;
+  padding: 8px 1px; font-size: 11px; font-weight: 700; color: var(--muted);
+  display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 0;
 }
-.tab[aria-current="true"] { color: var(--ink); background: var(--paper); }
-.tab .rule { width: 20px; height: 3px; border-radius: 2px; background: transparent; }
-.tab[aria-current="true"] .rule { background: var(--ink); }
-.tab .lab { display: flex; align-items: center; gap: 5px; }
-.badge { font-family: var(--mono); font-size: 10.5px; font-weight: 700; line-height: 1;
-  background: var(--signal); color: var(--signal-ink); border-radius: 999px; padding: 3px 6px; }
+.tab[aria-current="true"] { color: #fff; background: var(--green); }
+.tab .lab { display: flex; align-items: center; gap: 3px; white-space: nowrap; }
+.badge {
+  font-size: 10px; font-weight: 800; line-height: 1; background: var(--honey);
+  color: var(--honey-ink); border-radius: 999px; padding: 3px 5px;
+}
+.tab[aria-current="true"] .badge { background: #fff; color: var(--green-deep); }
 
 @media (min-width: 720px) {
-  .tabs { position: static; border: 0; background: none; padding: 0; gap: 6px; margin-top: 16px; }
-  .tab { flex: 0 0 auto; padding: 8px 16px; border: 1px solid var(--line); background: var(--card); border-radius: 3px; }
-  .tab[aria-current="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
-  .tab[aria-current="true"] .rule { background: transparent; }
+  .tabs { position: static; border: 0; background: none; padding: 0; gap: 7px; margin-top: 14px; box-shadow: none; }
+  .tab { flex: 0 0 auto; padding: 9px 18px; background: var(--card); border-radius: 999px; font-size: 13px; box-shadow: var(--shadow); }
   .shell { padding-bottom: 48px; }
 }
 
 .panel { padding-top: 18px; }
-.lede { font-size: 13px; color: var(--muted); line-height: 1.7; margin: 0 0 14px; }
+.lede { font-size: 13px; color: var(--ink2); line-height: 1.75; margin: 0 0 14px; }
 .field { display: block; margin-bottom: 14px; }
-.label { display: block; font-family: var(--mono); font-size: 11px; letter-spacing: .08em; color: var(--muted); margin-bottom: 6px; }
-.input, .area { width: 100%; background: var(--card); border: 1px solid var(--line); border-radius: 3px; padding: 12px; font-size: 16px; }
+.label { display: block; font-size: 12px; font-weight: 700; color: var(--ink2); margin-bottom: 6px; }
+.input, .area, .sel {
+  width: 100%; background: var(--card); border: 2px solid var(--line); border-radius: 14px;
+  padding: 12px 14px; font-size: 16px;
+}
+.input:focus, .area:focus, .sel:focus { border-color: var(--green); outline: none; }
 .area { resize: vertical; min-height: 68px; }
 .chips { display: flex; flex-wrap: wrap; gap: 7px; }
-.chip { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 7px 13px; font-size: 13px; cursor: pointer; }
-.chip[aria-pressed="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
-
-.btn { border: 0; border-radius: 3px; padding: 13px 18px; font-size: 15px; font-weight: 700; cursor: pointer; background: var(--ink); color: #fff; }
-.btn:disabled { opacity: .35; cursor: not-allowed; }
-.btn.wide { width: 100%; }
-.btn.ghost { background: none; color: var(--ink2); border: 1px solid var(--line); }
-.btn.warn { background: var(--signal); color: var(--signal-ink); }
-.btn.go { background: var(--go); }
-.btn.danger { background: var(--stamp); }
-.btn.sm { padding: 8px 13px; font-size: 13px; }
-.toast { margin-top: 12px; font-size: 13px; font-weight: 700; color: var(--go); font-family: var(--mono); }
-
-.card { position: relative; background: var(--card); border: 1px solid var(--line); border-radius: 3px; margin-bottom: 9px; overflow: hidden; }
-.card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 9px; background: var(--line); }
-.card.is-low::before { background: repeating-linear-gradient(45deg, var(--signal) 0 6px, #2a2314 6px 12px); }
-.card-main { display: flex; align-items: center; gap: 12px; padding: 13px 13px 13px 22px; }
-.name { font-size: 16px; font-weight: 700; line-height: 1.35; }
-.meta { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 4px; }
-.pill { display: inline-block; font-family: var(--mono); font-size: 10.5px; font-weight: 700; line-height: 1;
-  padding: 3px 6px; border-radius: 999px; margin-left: 7px; vertical-align: 2px; }
-.pill.soon { background: var(--signal); color: var(--signal-ink); }
-.pill.over { background: var(--stamp); color: #fff; }
-.hint { font-size: 11.5px; color: var(--muted); margin-top: 6px; line-height: 1.6; }
-.update-bar {
-  position: fixed; left: 0; right: 0; top: 0; z-index: 50;
-  background: var(--ink); color: #fff; display: flex; align-items: center; gap: 12px;
-  padding: calc(11px + env(safe-area-inset-top)) 14px 11px; font-size: 13px; font-weight: 700;
+.chip {
+  border: 2px solid var(--line); background: var(--card); border-radius: 999px;
+  padding: 7px 14px; font-size: 13px; font-weight: 700; color: var(--ink2); cursor: pointer;
 }
-.update-bar span { flex: 1; }
-.update-bar .btn { background: #fff; color: var(--ink); }
-.upd-close { background: none; border: 0; color: #fff; font-size: 20px; line-height: 1; padding: 4px 6px; cursor: pointer; opacity: .7; }
-.memo { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+.chip[aria-pressed="true"] { background: var(--green); color: #fff; border-color: var(--green); }
+
+.btn {
+  border: 0; border-radius: 999px; padding: 13px 20px; font-size: 15px; font-weight: 800;
+  cursor: pointer; background: var(--green); color: #fff; box-shadow: 0 2px 0 var(--green-deep);
+}
+.btn:active { transform: translateY(1px); box-shadow: none; }
+.btn:disabled { opacity: .38; cursor: not-allowed; box-shadow: none; }
+.btn.wide { width: 100%; }
+.btn.ghost { background: var(--card); color: var(--ink2); border: 2px solid var(--line); box-shadow: none; }
+.btn.warn { background: var(--honey); color: var(--honey-ink); box-shadow: 0 2px 0 #d99e33; }
+.btn.pinkish { background: var(--pink); color: #fff; box-shadow: 0 2px 0 #cf7b9a; }
+.btn.danger { background: var(--coral); box-shadow: 0 2px 0 #d4715c; }
+.btn.sm { padding: 9px 15px; font-size: 13px; }
+.toast { margin-top: 12px; font-size: 13px; font-weight: 700; color: var(--green-deep); }
+
+.quick { background: var(--green-pale); border-radius: 18px; padding: 14px; margin-bottom: 18px; }
+.quick .label { color: var(--green-deep); }
+.quick-row { display: flex; gap: 8px; }
+.quick-row .input { flex: 1; min-width: 0; background: #fff; border-color: #fff; }
+.quick-row .sel { width: auto; flex: none; max-width: 40%; background: #fff; border-color: #fff; padding: 12px 8px; }
+.quick .btn { margin-top: 10px; }
+.quick-msg { font-size: 12.5px; font-weight: 700; color: var(--green-deep); margin: 10px 0 0; }
+
+.card {
+  position: relative; background: var(--card); border-radius: 18px; margin-bottom: 10px;
+  overflow: hidden; box-shadow: var(--shadow);
+}
+.card::before { content: ""; position: absolute; left: 8px; top: 12px; bottom: 12px; width: 5px; border-radius: 999px; background: var(--line); }
+.card.is-low::before { background: var(--honey); }
+.card.is-want::before { background: var(--pink); }
+.card.is-over::before { background: var(--coral); }
+.card-main { display: flex; align-items: center; gap: 10px; padding: 14px 14px 14px 24px; }
+.name { font-size: 16px; font-weight: 800; line-height: 1.4; }
+.meta { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
+.memo { font-size: 12.5px; color: var(--ink2); margin-top: 4px; }
+.pill {
+  display: inline-block; font-size: 10.5px; font-weight: 800; line-height: 1;
+  padding: 4px 8px; border-radius: 999px; margin-left: 7px; vertical-align: 2px;
+}
+.pill.soon { background: var(--honey-pale); color: var(--honey-ink); }
+.pill.over { background: var(--coral); color: #fff; }
+.pill.want { background: var(--pink-pale); color: var(--pink-ink); }
 .grow { flex: 1; min-width: 0; }
 .stack { display: flex; flex-direction: column; gap: 6px; }
-.open { background: none; border: 0; cursor: pointer; padding: 6px; color: var(--muted); font-size: 12px; }
+.open { background: none; border: 0; cursor: pointer; padding: 6px; color: var(--muted); font-size: 12px; font-weight: 700; }
 
-.detail { border-top: 1px dashed var(--line); padding: 13px 13px 15px 22px; background: #fbfcfc; }
-.dl { display: grid; grid-template-columns: 76px 1fr; gap: 6px 12px; font-size: 13px; margin: 0 0 12px; }
-.dl dt { font-family: var(--mono); font-size: 11px; color: var(--muted); padding-top: 2px; }
+.detail { border-top: 2px dashed var(--line); padding: 14px 14px 16px 24px; background: #fbfefb; }
+.dl { display: grid; grid-template-columns: 80px 1fr; gap: 7px 12px; font-size: 13px; margin: 0 0 12px; }
+.dl dt { font-size: 11.5px; color: var(--muted); padding-top: 2px; font-weight: 700; }
 .dl dd { margin: 0; }
 .row { display: flex; flex-wrap: wrap; gap: 8px; }
 
-.empty { border: 1px dashed var(--line); border-radius: 3px; padding: 30px 20px; text-align: center; color: var(--muted); font-size: 13.5px; line-height: 1.8; background: rgba(255,255,255,.5); }
+.empty {
+  border: 2px dashed var(--line); border-radius: 18px; padding: 30px 20px; text-align: center;
+  color: var(--muted); font-size: 13.5px; line-height: 1.8; background: rgba(255,255,255,.6);
+}
 .empty b { display: block; color: var(--ink); font-size: 15px; margin-bottom: 6px; }
-.group { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; color: var(--muted); margin: 20px 0 8px; padding-bottom: 5px; border-bottom: 1px solid var(--line); }
+.group { font-size: 12px; font-weight: 800; color: var(--green-deep); margin: 22px 0 9px; }
+.hint { font-size: 11.5px; color: var(--muted); margin-top: 6px; line-height: 1.6; }
 
 .stamp { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; }
 .stamp span {
-  width: 88px; height: 88px; border: 4px solid var(--stamp); color: var(--stamp); border-radius: 50%;
-  display: grid; place-items: center; font-size: 30px; font-weight: 800; background: rgba(255,255,255,.86);
-  animation: stamp 460ms cubic-bezier(.2,.85,.25,1) forwards;
+  width: 86px; height: 86px; border: 4px solid var(--green); color: var(--green-deep);
+  border-radius: 50%; display: grid; place-items: center; font-size: 28px; font-weight: 800;
+  background: rgba(255,255,255,.9); animation: stamp 460ms cubic-bezier(.2,.85,.25,1) forwards;
 }
 @keyframes stamp {
-  0% { opacity: 0; transform: rotate(-34deg) scale(2.3); }
-  55% { opacity: 1; transform: rotate(-13deg) scale(.94); }
-  100% { opacity: 1; transform: rotate(-13deg) scale(1); }
+  0% { opacity: 0; transform: rotate(-30deg) scale(2.2); }
+  55% { opacity: 1; transform: rotate(-11deg) scale(.94); }
+  100% { opacity: 1; transform: rotate(-11deg) scale(1); }
 }
 .collapsing { animation: collapse 300ms ease forwards; }
-@keyframes collapse { to { opacity: 0; max-height: 0; margin-bottom: 0; padding: 0; border-width: 0; transform: translateX(14px); } }
+@keyframes collapse { to { opacity: 0; max-height: 0; margin-bottom: 0; padding: 0; transform: translateX(14px); } }
 
-.backup { margin-top: 28px; padding-top: 16px; border-top: 1px solid var(--line); }
+.backup { margin-top: 30px; padding-top: 18px; border-top: 2px solid var(--line); }
 .backup p { font-size: 12px; color: var(--muted); line-height: 1.7; margin: 0 0 10px; }
 
+.update-bar {
+  position: fixed; left: 0; right: 0; top: 0; z-index: 50; background: var(--green); color: #fff;
+  display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 700;
+  padding: calc(11px + env(safe-area-inset-top)) 14px 11px;
+}
+.update-bar span { flex: 1; }
+.update-bar .btn { background: #fff; color: var(--green-deep); box-shadow: none; }
+.upd-close { background: none; border: 0; color: #fff; font-size: 20px; line-height: 1; padding: 4px 6px; cursor: pointer; opacity: .8; }
+
+.sheet-bg {
+  position: fixed; inset: 0; z-index: 60; background: rgba(47,79,62,.35);
+  display: flex; align-items: flex-end; justify-content: center;
+}
+.sheet {
+  background: var(--card); border-radius: 24px 24px 0 0; width: 100%; max-width: 460px;
+  padding: 22px 20px calc(22px + env(safe-area-inset-bottom));
+  animation: rise 240ms cubic-bezier(.2,.9,.3,1);
+}
+@keyframes rise { from { transform: translateY(24px); opacity: 0; } }
+.sheet h2 { font-size: 17px; margin: 0 0 6px; font-weight: 800; }
+.sheet .who { font-size: 13px; color: var(--muted); margin: 0 0 16px; }
+@media (min-width: 720px) {
+  .sheet-bg { align-items: center; }
+  .sheet { border-radius: 24px; }
+}
 @media (prefers-reduced-motion: reduce) { *, *::before { animation-duration: 1ms !important; transition-duration: 1ms !important; } }
 </style>
 </head>
 <body>
 <div class="shell">
   <header class="head">
-    <h1 class="title">日用品ストック</h1>
+    <h1 class="title">
+      <svg class="leaf" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22V11" stroke="#57a773" stroke-width="2.4" stroke-linecap="round" fill="none"/><path d="M12 12C12 7 8 4 4 4c0 5 3 8 8 8z" fill="#7cc48f"/><path d="M12 14c0-4 3-7 7-7 0 4-3 7-7 7z" fill="#57a773"/></svg>
+      日用品ストック
+    </h1>
     <div class="counts">
-      <span>登録<b id="cAll">0</b></span>
+      <span>ぜんぶ<b id="cAll">0</b></span>
       <span class="hot">そろそろ<b id="cLow">0</b></span>
+      <span class="want" id="cWantWrap" hidden>ほしいな<b id="cWant">0</b></span>
       <span class="exp" id="cExpWrap" hidden>期限<b id="cExp">0</b></span>
     </div>
     <nav class="tabs" id="tabs"></nav>
   </header>
   <main class="panel" id="panel"></main>
 </div>
+<div id="modal"></div>
 <input type="file" id="importFile" accept="application/json" hidden>
 
 <script>
 "use strict";
 const KEY = "nichiyohin:items:v1";
-const APP_VERSION = "2026.08.11-2";
+const APP_VERSION = "2026.08.11-4";
 const CATEGORIES = ["食料品","キッチン","バス・トイレ","洗濯","掃除","衛生・ケア","紙もの","その他"];
 const DATED = ["食料品"];
 const hasExpiry = (cat) => DATED.indexOf(cat) >= 0;
-// 旧カテゴリ名の読み替え。登録済みのものが迷子にならないよう、読み込み時に付け替える
 const RENAMED = { "食品": "食料品", "飲みもの": "食料品", "飲み物": "食料品" };
-const TABS = [["list","一覧"],["add","新規登録"],["low","そろそろ"],["buy","買うもの"]];
+const TABS = [["list","一覧"],["add","登録"],["low","そろそろ"],["want","ほしいな"],["buy","買うもの"]];
 
 let items = [];
 let tab = "list";
-let openId = null;
-let editId = null;
-let confirmId = null;
-let toast = "";
+let openId = null, editId = null, confirmId = null, askExpiryId = null;
+let toast = "", quickMsg = "";
 let addDraft = { name: "", category: CATEGORIES[0], place: "", memo: "", expiry: "" };
+let quickCat = { want: "その他", buy: "食料品" };
 let query = { list: "", low: "" };
 let filter = "all";
 
@@ -187,32 +245,36 @@ const fmtDate = (ts) => { if (!ts) return "未記録"; const d = new Date(ts);
   return d.getFullYear() + "." + String(d.getMonth()+1).padStart(2,"0") + "." + String(d.getDate()).padStart(2,"0"); };
 const daysSince = (ts) => (ts ? Math.floor((Date.now() - ts) / 86400000) : null);
 
-/* 賞味期限は "YYYY-MM-DD" の文字列で持つ。残り日数と、近さの段階を返す。 */
+/* 賞味期限は "YYYY-MM-DD" の文字列。残り日数と近さの段階を返す */
 function expiryInfo(item) {
   if (!item || !item.expiry) return null;
-  const p = item.expiry.split("-");
+  const p = String(item.expiry).split("-");
   if (p.length !== 3) return null;
   const target = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
   if (isNaN(target)) return null;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = new Date(); today.setHours(0,0,0,0);
   const days = Math.round((target - today) / 86400000);
   const level = days < 0 ? "over" : days <= 3 ? "soon" : days <= 7 ? "near" : "ok";
-  const text = days < 0 ? Math.abs(days) + "日過ぎ" : days === 0 ? "今日まで" : "あと" + days + "日";
-  return { days: days, level: level, text: text,
-    date: p[0] + "." + p[1] + "." + p[2] };
+  const text = days < 0 ? Math.abs(days) + "日すぎ" : days === 0 ? "今日まで" : "あと" + days + "日";
+  return { days: days, level: level, text: text, date: p[0] + "." + p[1] + "." + p[2] };
 }
-function expiryPill(item) {
-  const e = expiryInfo(item);
+function expiryPill(i) {
+  const e = expiryInfo(i);
   if (!e || e.level === "ok") return "";
-  const cls = e.level === "over" ? "over" : "soon";
-  const label = e.level === "over" ? "期限切れ" : e.text;
-  return '<span class="pill ' + cls + '">' + label + '</span>';
+  return '<span class="pill ' + (e.level === "over" ? "over" : "soon") + '">' +
+    (e.level === "over" ? "期限すぎ" : e.text) + '</span>';
 }
-function expiryMeta(item) {
-  const e = expiryInfo(item);
-  return e ? '／期限 ' + e.date + '（' + e.text + '）' : "";
+function wantPill(i) { return i.status === "want" ? '<span class="pill want">ほしいな</span>' : ""; }
+function expiryMeta(i) { const e = expiryInfo(i); return e ? '／期限 ' + e.date + '（' + e.text + '）' : ""; }
+function cardClass(i) {
+  const e = expiryInfo(i);
+  if (e && e.level === "over") return " is-over";
+  if (i.status === "low") return " is-low";
+  if (i.status === "want") return " is-want";
+  return "";
 }
+
+/* ---------- 保存 ---------- */
 
 function normalize() {
   let changed = false;
@@ -220,6 +282,8 @@ function normalize() {
     if (RENAMED[i.category]) { i.category = RENAMED[i.category]; changed = true; }
     if (CATEGORIES.indexOf(i.category) < 0) { i.category = "その他"; changed = true; }
     if (!hasExpiry(i.category) && i.expiry) { i.expiry = ""; changed = true; }
+    if (!i.status) { i.status = "ok"; changed = true; }
+    if (!i.prev) { i.prev = "ok"; changed = true; }
   });
   return changed;
 }
@@ -234,108 +298,197 @@ function save() {
 }
 function commit() { save(); render(); }
 
-function lowItems() { return items.filter(i => i.status === "low").sort((a,b) => (a.lowAt||0) - (b.lowAt||0)); }
-function find(id) { return items.find(i => i.id === id); }
-function markLow(id) { const it = find(id); if (it) { it.status = "low"; it.lowAt = Date.now(); commit(); } }
-function unmarkLow(id) { const it = find(id); if (it) { it.status = "ok"; it.lowAt = null; commit(); } }
+/* ---------- 状態の出し入れ ---------- */
+
+const byStatus = (s) => items.filter(i => i.status === s);
+const buyList = () => byStatus("low").sort((a,b) => (a.lowAt||0) - (b.lowAt||0));
+const wantList = () => byStatus("want").sort((a,b) => (b.wantAt||0) - (a.wantAt||0));
+const find = (id) => items.find(i => i.id === id);
+
+function toBuy(id) {           // そろそろ／買うものリストへ
+  const it = find(id); if (!it) return;
+  it.prev = it.status; it.status = "low"; it.lowAt = Date.now(); commit();
+}
+function toWant(id) {          // ほしいなへ
+  const it = find(id); if (!it) return;
+  it.prev = it.status; it.status = "want"; it.wantAt = Date.now(); commit();
+}
+function undo(id) {            // 元の場所へ戻す
+  const it = find(id); if (!it) return;
+  const back = it.prev === "low" ? "ok" : (it.prev || "ok");
+  it.status = back;
+  if (back !== "low") it.lowAt = null;
+  if (back !== "want") it.wantAt = null;
+  it.prev = "ok"; commit();
+}
 function bought(id) {
-  const it = find(id);
-  if (!it) return;
-  it.status = "ok"; it.lowAt = null; it.lastBoughtAt = Date.now(); it.buyCount = (it.buyCount||0) + 1;
-  it.expiry = ""; // 買い直したので前の期限は当てはまらない。新しい期限は詳細から入れ直す
+  const it = find(id); if (!it) return;
+  it.status = "ok"; it.prev = "ok"; it.lowAt = null; it.wantAt = null;
+  it.lastBoughtAt = Date.now(); it.buyCount = (it.buyCount||0) + 1;
+  it.expiry = "";                       // 買い直したので前の期限は当てはまらない
+  if (hasExpiry(it.category)) askExpiryId = it.id;   // 新しい期限を聞く
   commit();
 }
 function removeItem(id) { items = items.filter(i => i.id !== id); confirmId = null; openId = null; commit(); }
 
-/* ---------- 画面 ---------- */
+/* 同じ名前があれば作り直さず、そこへ移す */
+function quickAdd(rawName, cat, target) {
+  const name = String(rawName || "").trim();
+  if (!name) return;
+  const dup = items.find(i => i.name.trim().toLowerCase() === name.toLowerCase());
+  if (dup) {
+    if (dup.status === target) { quickMsg = "「" + dup.name + "」はすでにここにあります"; render(); return; }
+    dup.prev = dup.status;
+    dup.status = target;
+    if (target === "low") dup.lowAt = Date.now(); else dup.wantAt = Date.now();
+    quickMsg = "登録ずみの「" + dup.name + "」を移しました";
+    commit(); return;
+  }
+  items.unshift({ id: uid(), name: name, category: cat, place: "", memo: "", expiry: "",
+    status: target, prev: "ok",
+    lowAt: target === "low" ? Date.now() : null,
+    wantAt: target === "want" ? Date.now() : null,
+    lastBoughtAt: null, buyCount: 0 });
+  quickMsg = "「" + name + "」を追加しました";
+  commit();
+}
+
+/* ---------- 部品 ---------- */
 
 function tabsHtml() {
-  const n = lowItems().length;
+  const n = buyList().length;
   return TABS.map(([id,label]) =>
     '<button class="tab" data-tab="' + id + '" aria-current="' + (tab === id) + '">' +
       '<span class="lab">' + label + (id === "buy" && n ? '<span class="badge">' + n + '</span>' : "") + '</span>' +
-      '<span class="rule"></span></button>').join("");
+    '</button>').join("");
 }
-
 function emptyBox(title, body, btn, target) {
   return '<div class="empty"><b>' + title + '</b>' + body +
     (btn ? '<div style="margin-top:16px"><button class="btn sm" data-go="' + target + '">' + btn + '</button></div>' : "") + '</div>';
 }
-
 function chipsHtml(sel, attr) {
   return '<div class="chips">' + CATEGORIES.map(c =>
     '<button class="chip" ' + attr + '="' + esc(c) + '" aria-pressed="' + (sel === c) + '">' + esc(c) + '</button>').join("") + '</div>';
 }
+function selectHtml(id, sel) {
+  return '<select class="sel" id="' + id + '">' + CATEGORIES.map(c =>
+    '<option value="' + esc(c) + '"' + (sel === c ? " selected" : "") + '>' + esc(c) + '</option>').join("") + '</select>';
+}
+function quickBox(target, label, placeholder, btnLabel, btnClass) {
+  const ids = target === "want" ? ["wName","wCat","wAdd"] : ["bName","bCat","bAdd"];
+  return '<div class="quick"><span class="label">' + label + '</span>' +
+    '<div class="quick-row">' +
+      '<input class="input" id="' + ids[0] + '" placeholder="' + placeholder + '">' +
+      selectHtml(ids[1], quickCat[target]) +
+    '</div>' +
+    '<button class="btn sm ' + btnClass + '" id="' + ids[2] + '">' + btnLabel + '</button>' +
+    (quickMsg ? '<p class="quick-msg">' + esc(quickMsg) + '</p>' : "") +
+    '</div>';
+}
+
+/* ---------- 登録 ---------- */
 
 function addScreen() {
   return '<section>' +
-    '<p class="lede">切らしたくない日用品を登録します。登録したものが管理対象になります。</p>' +
+    '<p class="lede">切らしたくないものを登録します。登録したものが管理の対象になります。</p>' +
     '<label class="field"><span class="label">品名</span>' +
       '<input class="input" id="aName" value="' + esc(addDraft.name) + '" placeholder="トイレットペーパー"></label>' +
     '<div class="field"><span class="label">カテゴリ</span>' + chipsHtml(addDraft.category, "data-acat") + '</div>' +
     (hasExpiry(addDraft.category)
       ? '<label class="field"><span class="label">賞味期限（任意）</span>' +
         '<input class="input" type="date" id="aExpiry" value="' + esc(addDraft.expiry) + '">' +
-        '<span class="hint">入れておくと、期限が近づいたものが一覧の上に出ます。空のままでも登録できます。</span></label>'
+        '<span class="hint">入れておくと、期限が近いものが一覧の上に出ます。空のままでも登録できます。</span></label>'
       : "") +
     '<label class="field"><span class="label">置き場所（任意）</span>' +
       '<input class="input" id="aPlace" value="' + esc(addDraft.place) + '" placeholder="洗面台の下"></label>' +
     '<label class="field"><span class="label">メモ（任意）</span>' +
       '<textarea class="area" id="aMemo" placeholder="いつもの銘柄、詰め替え用12個入りなど">' + esc(addDraft.memo) + '</textarea></label>' +
     '<button class="btn wide" id="aSubmit">登録する</button>' +
-    (toast ? '<p class="toast">「' + esc(toast) + '」を登録しました。続けて登録できます。</p>' : "") +
+    (toast ? '<p class="toast">「' + esc(toast) + '」を登録しました。つづけて登録できます。</p>' : "") +
     '</section>';
 }
 
+/* ---------- そろそろ ---------- */
+
 function lowScreen() {
-  if (!items.length) return emptyBox("まだ何も登録されていません",
-    "先に日用品を登録すると、ここでなくなりそうなものを選べます。", "新規登録へ", "add");
+  if (!items.length) return emptyBox("まだ何もありません",
+    "先に登録すると、ここでなくなりそうなものを選べます。", "登録へ", "add");
   const q = query.low.trim().toLowerCase();
-  const low = items.filter(i => i.status === "low");
-  const stock = items.filter(i => i.status === "ok" &&
-    (i.name + i.category + (i.place||"")).toLowerCase().includes(q));
+  const low = buyList();
+  const stock = byStatus("ok").filter(i => (i.name + i.category + (i.place||"")).toLowerCase().includes(q));
 
   let h = '<section><p class="lede">残りが少ないと気づいたら、ここで「そろそろ」に入れます。入れたものは買うものリストに並びます。</p>' +
-    '<label class="field"><span class="label">絞り込み</span>' +
-    '<input class="input" id="qLow" value="' + esc(query.low) + '" placeholder="品名で探す"></label><div id="results">';
+    '<label class="field"><span class="label">さがす</span>' +
+    '<input class="input" id="qLow" value="' + esc(query.low) + '" placeholder="品名でさがす"></label><div id="results">';
 
   if (low.length) {
     h += '<div class="group">そろそろ登録ずみ ' + low.length + '</div>';
-    h += low.map(i => '<div class="card is-low"><div class="card-main"><div class="grow">' +
-      '<div class="name">' + esc(i.name) + '</div>' +
-      '<div class="meta">' + esc(i.category) + '／' + daysSince(i.lowAt) + '日前に登録</div></div>' +
-      '<button class="btn ghost sm" data-unlow="' + i.id + '">取り消す</button></div></div>').join("");
+    h += low.map(i => '<div class="card' + cardClass(i) + '"><div class="card-main"><div class="grow">' +
+      '<div class="name">' + esc(i.name) + expiryPill(i) + '</div>' +
+      '<div class="meta">' + esc(i.category) + '／' + daysSince(i.lowAt) + '日前に登録' + expiryMeta(i) + '</div></div>' +
+      '<button class="btn ghost sm" data-undo="' + i.id + '">取り消す</button></div></div>').join("");
   }
 
   const groups = CATEGORIES.map(c => [c, stock.filter(i => i.category === c)]).filter(g => g[1].length);
   if (!groups.length) {
-    h += '<div class="empty" style="margin-top:20px">該当する日用品がありません。別の言葉で探すか、新しく登録してください。</div>';
+    h += '<div class="empty" style="margin-top:20px">見つかりませんでした。別の言葉でさがすか、新しく登録してください。</div>';
   } else {
     h += groups.map(([cat, arr]) => '<div class="group">' + esc(cat) + '</div>' + arr.map(i =>
-      '<div class="card"><div class="card-main"><div class="grow">' +
+      '<div class="card' + cardClass(i) + '"><div class="card-main"><div class="grow">' +
       '<div class="name">' + esc(i.name) + expiryPill(i) + '</div>' +
       '<div class="meta">' + (i.place ? esc(i.place) + "／" : "") + '前回 ' + fmtDate(i.lastBoughtAt) + expiryMeta(i) + '</div></div>' +
-      '<button class="btn warn sm" data-low="' + i.id + '">そろそろ</button></div></div>').join("")).join("");
+      '<button class="btn warn sm" data-tobuy="' + i.id + '">そろそろ</button></div></div>').join("")).join("");
   }
   return h + '</div></section>';
 }
 
-function buyScreen() {
-  const list = lowItems();
-  if (!list.length) return emptyBox("買うものはありません",
-    "なくなりそうなものが出たら「そろそろ」に登録すると、ここに並びます。", "そろそろ登録へ", "low");
-  return '<section><p class="lede">買い物中に開く画面です。かごに入れたら「買ったよ」を押すと、そろそろの印が消えます。</p>' +
-    list.map(i => {
-      const d = daysSince(i.lastBoughtAt);
-      return '<div class="card is-low" data-card="' + i.id + '"><div class="card-main"><div class="grow">' +
-        '<div class="name">' + esc(i.name) + '</div>' +
-        '<div class="meta">' + esc(i.category) + '／前回 ' + fmtDate(i.lastBoughtAt) + (d !== null ? "（" + d + "日前）" : "") + '</div>' +
-        (i.memo ? '<div class="memo">' + esc(i.memo) + '</div>' : "") + '</div>' +
-        '<div class="stack">' +
-        '<button class="btn go sm" data-buy="' + i.id + '">買ったよ</button>' +
-        '<button class="btn ghost sm" data-unlow="' + i.id + '">戻す</button></div></div></div>';
-    }).join("") + '</section>';
+/* ---------- ほしいな ---------- */
+
+function wantScreen() {
+  const list = wantList();
+  let h = '<section><p class="lede">すぐには要らないけれど、いつか欲しいものを置いておく場所です。買うと決めたら「買う！」で買うものリストへ移ります。</p>' +
+    quickBox("want", "ほしいなを追加", "新しいマグカップ", "ほしいなに入れる", "pinkish");
+
+  if (!list.length) {
+    h += emptyBox("まだ何もありません", "気になったものを、思いついたときに入れておけます。", null, null);
+    return h + '</section>';
+  }
+  h += list.map(i => '<div class="card is-want"><div class="card-main"><div class="grow">' +
+    '<div class="name">' + esc(i.name) + '</div>' +
+    '<div class="meta">' + esc(i.category) + '／' + daysSince(i.wantAt) + '日前から' + '</div>' +
+    (i.memo ? '<div class="memo">' + esc(i.memo) + '</div>' : "") + '</div>' +
+    '<div class="stack">' +
+    '<button class="btn sm" data-tobuy="' + i.id + '">買う！</button>' +
+    '<button class="btn ghost sm" data-undo="' + i.id + '">やめる</button></div></div></div>').join("");
+  return h + '</section>';
 }
+
+/* ---------- 買うもの ---------- */
+
+function buyScreen() {
+  const list = buyList();
+  let h = '<section><p class="lede">買い物中に開く画面です。かごに入れたら「買ったよ」を押してください。ここから直接足すこともできます。</p>' +
+    quickBox("buy", "買うものを直接ふやす", "牛乳", "リストに足す", "");
+
+  if (!list.length) {
+    h += emptyBox("買うものはありません",
+      "「そろそろ」や「ほしいな」から移すか、上の欄から直接足せます。", "そろそろへ", "low");
+    return h + '</section>';
+  }
+  h += list.map(i => {
+    const d = daysSince(i.lastBoughtAt);
+    return '<div class="card' + cardClass(i) + '" data-card="' + i.id + '"><div class="card-main"><div class="grow">' +
+      '<div class="name">' + esc(i.name) + expiryPill(i) + (i.prev === "want" ? '<span class="pill want">ほしいな</span>' : "") + '</div>' +
+      '<div class="meta">' + esc(i.category) + '／前回 ' + fmtDate(i.lastBoughtAt) + (d !== null ? "（" + d + "日前）" : "") + '</div>' +
+      (i.memo ? '<div class="memo">' + esc(i.memo) + '</div>' : "") + '</div>' +
+      '<div class="stack">' +
+      '<button class="btn sm" data-buy="' + i.id + '">買ったよ</button>' +
+      '<button class="btn ghost sm" data-undo="' + i.id + '">戻す</button></div></div></div>';
+  }).join("");
+  return h + '</section>';
+}
+
+/* ---------- 一覧 ---------- */
 
 function detailHtml(i) {
   if (editId === i.id) {
@@ -344,8 +497,7 @@ function detailHtml(i) {
       '<div class="field"><span class="label">カテゴリ</span>' + chipsHtml(i.category, "data-ecat") + '</div>' +
       (hasExpiry(i.category)
         ? '<label class="field"><span class="label">賞味期限（任意）</span>' +
-          '<input class="input" type="date" id="eExpiry" value="' + esc(i.expiry||"") + '"></label>'
-        : "") +
+          '<input class="input" type="date" id="eExpiry" value="' + esc(i.expiry||"") + '"></label>' : "") +
       '<label class="field"><span class="label">置き場所</span><input class="input" id="ePlace" value="' + esc(i.place||"") + '"></label>' +
       '<label class="field"><span class="label">メモ</span><textarea class="area" id="eMemo">' + esc(i.memo||"") + '</textarea></label>' +
       '<div class="row"><button class="btn sm" data-savee="' + i.id + '">保存する</button>' +
@@ -353,49 +505,48 @@ function detailHtml(i) {
   }
   const e = expiryInfo(i);
   return '<div class="detail"><dl class="dl">' +
-    (hasExpiry(i.category)
-      ? '<dt>賞味期限</dt><dd>' + (e ? e.date + "（" + e.text + "）" : "未設定") + '</dd>'
-      : "") +
+    (hasExpiry(i.category) ? '<dt>賞味期限</dt><dd>' + (e ? e.date + "（" + e.text + "）" : "未設定") + '</dd>' : "") +
     '<dt>置き場所</dt><dd>' + (i.place ? esc(i.place) : "未設定") + '</dd>' +
     '<dt>メモ</dt><dd>' + (i.memo ? esc(i.memo) : "なし") + '</dd>' +
     '<dt>前回購入</dt><dd>' + fmtDate(i.lastBoughtAt) + '</dd>' +
-    '<dt>購入回数</dt><dd>' + (i.buyCount||0) + ' 回</dd></dl><div class="row">' +
+    '<dt>買った回数</dt><dd>' + (i.buyCount||0) + ' 回</dd></dl><div class="row">' +
     '<button class="btn ghost sm" data-edit="' + i.id + '">編集する</button>' +
-    (i.status === "low" ? '<button class="btn ghost sm" data-unlow="' + i.id + '">そろそろを取り消す</button>' : "") +
+    (i.status === "ok" ? '<button class="btn ghost sm" data-towant="' + i.id + '">ほしいなに入れる</button>' : "") +
+    (i.status !== "ok" ? '<button class="btn ghost sm" data-undo="' + i.id + '">元にもどす</button>' : "") +
     (confirmId === i.id
       ? '<button class="btn danger sm" data-del="' + i.id + '">削除する</button><button class="btn ghost sm" data-nodel="1">やめる</button>'
       : '<button class="btn ghost sm" data-confirm="' + i.id + '">管理から外す</button>') +
     '</div></div>';
 }
 
-/* バックアップとバージョンの欄。1件も無いときこそ「読み込む」が要るので、
-   一覧が空でも必ず出す。 */
 function footerHtml() {
   return '<div class="backup">' +
     '<p>データはこの端末の中だけに保存されています。念のため、ときどき書き出しておくと安心です。</p>' +
     '<div class="row"><button class="btn ghost sm" id="expBtn"' + (items.length ? "" : " disabled") + '>書き出す</button>' +
     '<button class="btn ghost sm" id="impBtn">読み込む</button></div>' +
-    '<p class="hint" style="margin-top:16px">バージョン ' + APP_VERSION + '　' +
-    '／ 最新版が反映されないときは「更新を確認」を押してください。登録した品物のデータは消えません。</p>' +
+    '<p class="hint" style="margin-top:16px">バージョン ' + APP_VERSION +
+    '　／ 最新版が反映されないときは「更新を確認」を押してください。登録した品物のデータは消えません。</p>' +
     '<div class="row"><button class="btn ghost sm" id="updBtn">更新を確認</button></div></div>';
 }
 
 function listScreen() {
   if (!items.length) return '<section>' +
-    emptyBox("まだ何も登録されていません", "よく使う日用品を登録すると、ここに並びます。", "新規登録へ", "add") +
+    emptyBox("まだ何もありません", "よく使うものを登録すると、ここに並びます。", "登録へ", "add") +
     footerHtml() + '</section>';
+
   const q = query.list.trim().toLowerCase();
-  // 期限切れ→期限間近→そろそろ→その他 の順に上へ
   const rank = (i) => {
     const e = expiryInfo(i);
     if (e && e.level === "over") return 0;
     if (e && (e.level === "soon" || e.level === "near")) return 1;
     if (i.status === "low") return 2;
-    return 3;
+    if (i.status === "want") return 3;
+    return 4;
   };
   const shown = items
     .filter(i => {
       if (filter === "low") return i.status === "low";
+      if (filter === "want") return i.status === "want";
       if (filter === "ok") return i.status === "ok";
       if (filter === "exp") { const e = expiryInfo(i); return !!e && e.level !== "ok"; }
       return true;
@@ -409,49 +560,75 @@ function listScreen() {
       return a.category.localeCompare(b.category, "ja");
     });
 
-  let h = '<section><label class="field"><span class="label">絞り込み</span>' +
-    '<input class="input" id="qList" value="' + esc(query.list) + '" placeholder="品名・置き場所で探す"></label>' +
+  let h = '<section><label class="field"><span class="label">さがす</span>' +
+    '<input class="input" id="qList" value="' + esc(query.list) + '" placeholder="品名・置き場所でさがす"></label>' +
     '<div class="chips" style="margin-bottom:16px">' +
-    [["all","すべて"],["low","そろそろ"],["exp","期限間近"],["ok","在庫あり"]].map(([v,l]) =>
+    [["all","ぜんぶ"],["low","そろそろ"],["want","ほしいな"],["exp","期限間近"],["ok","在庫あり"]].map(([v,l]) =>
       '<button class="chip" data-filter="' + v + '" aria-pressed="' + (filter === v) + '">' + l + '</button>').join("") +
     '</div><div id="results">';
 
   if (!shown.length) {
-    h += '<div class="empty">該当する日用品がありません。別の言葉で探してください。</div>';
+    h += '<div class="empty">見つかりませんでした。別の言葉でさがしてください。</div>';
   } else {
     h += shown.map(i => {
       const isOpen = openId === i.id;
-      return '<div class="card' + (i.status === "low" ? " is-low" : "") + '"><div class="card-main"><div class="grow">' +
-        '<div class="name">' + esc(i.name) + expiryPill(i) + '</div>' +
+      let action;
+      if (i.status === "low") action = '<button class="btn sm" data-buy="' + i.id + '">買ったよ</button>';
+      else if (i.status === "want") action = '<button class="btn sm" data-tobuy="' + i.id + '">買う！</button>';
+      else action = '<button class="btn warn sm" data-tobuy="' + i.id + '">そろそろ</button>';
+      return '<div class="card' + cardClass(i) + '"><div class="card-main"><div class="grow">' +
+        '<div class="name">' + esc(i.name) + wantPill(i) + expiryPill(i) + '</div>' +
         '<div class="meta">' + esc(i.category) +
-          (i.status === "low" ? '／そろそろ（' + daysSince(i.lowAt) + '日前）' : '／前回 ' + fmtDate(i.lastBoughtAt)) +
-          expiryMeta(i) + '</div></div>' +
-        (i.status === "low"
-          ? '<button class="btn go sm" data-buy="' + i.id + '">買ったよ</button>'
-          : '<button class="btn warn sm" data-low="' + i.id + '">そろそろ</button>') +
+          (i.status === "low" ? '／そろそろ（' + daysSince(i.lowAt) + '日前）'
+           : i.status === "want" ? '／ほしいな'
+           : '／前回 ' + fmtDate(i.lastBoughtAt)) + expiryMeta(i) + '</div></div>' +
+        action +
         '<button class="open" data-open="' + i.id + '" aria-expanded="' + isOpen + '">' + (isOpen ? "閉じる" : "詳細") + '</button>' +
         '</div>' + (isOpen ? detailHtml(i) : "") + '</div>';
     }).join("");
   }
-
-  h += '</div>' + footerHtml() + '</section>';
-  return h;
+  return h + '</div>' + footerHtml() + '</section>';
 }
+
+/* ---------- 賞味期限をたずねるシート ---------- */
+
+function modalHtml() {
+  const it = find(askExpiryId);
+  if (!it) return "";
+  return '<div class="sheet-bg" id="sheetBg"><div class="sheet" role="dialog" aria-modal="true">' +
+    '<h2>新しい賞味期限を入れますか？</h2>' +
+    '<p class="who">' + esc(it.name) + ' を買いました</p>' +
+    '<input class="input" type="date" id="mExpiry" value="">' +
+    '<div class="row" style="margin-top:16px">' +
+    '<button class="btn" id="mSave">登録する</button>' +
+    '<button class="btn ghost" id="mSkip">今は登録しない</button>' +
+    '</div></div></div>';
+}
+
+/* ---------- 描画 ---------- */
 
 function render() {
   $("#cAll").textContent = items.length;
-  $("#cLow").textContent = lowItems().length;
+  $("#cLow").textContent = buyList().length;
+  const nWant = wantList().length;
+  $("#cWant").textContent = nWant;
+  $("#cWantWrap").hidden = nWant === 0;
   const nExp = items.filter(i => { const e = expiryInfo(i); return e && e.level !== "ok"; }).length;
   $("#cExp").textContent = nExp;
   $("#cExpWrap").hidden = nExp === 0;
   $("#tabs").innerHTML = tabsHtml();
   $("#panel").innerHTML =
-    tab === "add" ? addScreen() : tab === "low" ? lowScreen() : tab === "buy" ? buyScreen() : listScreen();
+    tab === "add" ? addScreen() :
+    tab === "low" ? lowScreen() :
+    tab === "want" ? wantScreen() :
+    tab === "buy" ? buyScreen() : listScreen();
+  $("#modal").innerHTML = askExpiryId ? modalHtml() : "";
+  const mx = $("#mExpiry"); if (mx) mx.focus();
 }
 
 /* ---------- 操作 ---------- */
 
-function goTab(id) { tab = id; toast = ""; openId = null; editId = null; confirmId = null; render(); }
+function goTab(id) { tab = id; toast = ""; quickMsg = ""; openId = null; editId = null; confirmId = null; render(); }
 
 function submitAdd() {
   const name = $("#aName").value.trim();
@@ -460,7 +637,7 @@ function submitAdd() {
   items.unshift({ id: uid(), name: name, category: addDraft.category,
     place: $("#aPlace").value.trim(), memo: $("#aMemo").value.trim(),
     expiry: hasExpiry(addDraft.category) && exp ? exp.value : "",
-    status: "ok", lowAt: null, lastBoughtAt: null, buyCount: 0 });
+    status: "ok", prev: "ok", lowAt: null, wantAt: null, lastBoughtAt: null, buyCount: 0 });
   toast = name;
   addDraft = { name: "", category: addDraft.category, place: "", memo: "", expiry: "" };
   save(); render();
@@ -484,7 +661,6 @@ function exportData() {
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
-
 function importData(file) {
   const r = new FileReader();
   r.onload = () => {
@@ -500,10 +676,14 @@ function importData(file) {
 
 document.addEventListener("click", (e) => {
   const t = e.target.closest("button");
-  if (!t) return;
+  if (!t) {
+    if (e.target.id === "sheetBg") { askExpiryId = null; render(); }
+    return;
+  }
   const d = t.dataset;
   if (d.tab) return goTab(d.tab);
   if (d.go) return goTab(d.go);
+
   if (d.acat) {
     addDraft.name = $("#aName").value; addDraft.place = $("#aPlace").value; addDraft.memo = $("#aMemo").value;
     const ex = $("#aExpiry"); if (ex) addDraft.expiry = ex.value;
@@ -525,8 +705,12 @@ document.addEventListener("click", (e) => {
     return;
   }
   if (t.id === "aSubmit") return submitAdd();
-  if (d.low) return markLow(d.low);
-  if (d.unlow) return unmarkLow(d.unlow);
+  if (t.id === "wAdd") { quickCat.want = $("#wCat").value; return quickAdd($("#wName").value, quickCat.want, "want"); }
+  if (t.id === "bAdd") { quickCat.buy = $("#bCat").value; return quickAdd($("#bName").value, quickCat.buy, "low"); }
+
+  if (d.tobuy) return toBuy(d.tobuy);
+  if (d.towant) return toWant(d.towant);
+  if (d.undo) return undo(d.undo);
   if (d.buy) {
     const card = document.querySelector('[data-card="' + d.buy + '"]');
     if (card) {
@@ -544,21 +728,32 @@ document.addEventListener("click", (e) => {
   if (d.nodel) { confirmId = null; return render(); }
   if (d.del) return removeItem(d.del);
   if (d.filter) { filter = d.filter; return render(); }
+
+  if (t.id === "mSave") {
+    const it = find(askExpiryId); const v = $("#mExpiry").value;
+    if (it && v) it.expiry = v;
+    askExpiryId = null; return commit();
+  }
+  if (t.id === "mSkip") { askExpiryId = null; return render(); }
+
   if (t.id === "expBtn") return exportData();
   if (t.id === "impBtn") return $("#importFile").click();
   if (t.id === "updBtn") return applyUpdate();
 });
 
 document.addEventListener("input", (e) => {
-  if (e.target.id === "qList") { query.list = e.target.value; $("#results").outerHTML = listResults(); }
-  if (e.target.id === "qLow") { query.low = e.target.value; $("#results").outerHTML = lowResults(); }
+  if (e.target.id === "qList") { query.list = e.target.value; $("#results").outerHTML = partial(listScreen); }
+  if (e.target.id === "qLow") { query.low = e.target.value; $("#results").outerHTML = partial(lowScreen); }
 });
-
-function listResults() { const w = document.createElement("div"); w.innerHTML = listScreen(); return w.querySelector("#results").outerHTML; }
-function lowResults() { const w = document.createElement("div"); w.innerHTML = lowScreen(); return w.querySelector("#results").outerHTML; }
+function partial(fn) { const w = document.createElement("div"); w.innerHTML = fn(); return w.querySelector("#results").outerHTML; }
 
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && e.target.id === "aName") { e.preventDefault(); submitAdd(); }
+  if (e.key !== "Enter") return;
+  if (e.target.id === "aName") { e.preventDefault(); submitAdd(); }
+  if (e.target.id === "wName") { e.preventDefault(); quickCat.want = $("#wCat").value; quickAdd(e.target.value, quickCat.want, "want"); }
+  if (e.target.id === "bName") { e.preventDefault(); quickCat.buy = $("#bCat").value; quickAdd(e.target.value, quickCat.buy, "low"); }
+  if (e.target.id === "mExpiry") { e.preventDefault(); const it = find(askExpiryId);
+    if (it && e.target.value) it.expiry = e.target.value; askExpiryId = null; commit(); }
 });
 
 $("#importFile").addEventListener("change", (e) => {
@@ -585,7 +780,7 @@ async function applyUpdate() {
       const keys = await caches.keys();
       await Promise.all(keys.map(k => caches.delete(k)));
     }
-  } catch (e) { /* 失敗しても、下の再読み込みで取り直せる */ }
+  } catch (e) { /* 失敗しても下の再読み込みで取り直せる */ }
   location.reload();
 }
 
@@ -609,11 +804,9 @@ if ("serviceWorker" in navigator) {
         const w = reg.installing;
         if (!w) return;
         w.addEventListener("statechange", () => {
-          // すでに動いている版がある状態で新しい版が入った＝更新あり
           if (w.state === "installed" && navigator.serviceWorker.controller) showUpdateBar();
         });
       });
-      // アプリを開き直したときと、開きっぱなしのときの両方で確認する
       reg.update().catch(() => {});
       setInterval(() => reg.update().catch(() => {}), 60 * 60 * 1000);
     }).catch(() => {});
