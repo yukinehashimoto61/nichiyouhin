@@ -255,7 +255,7 @@ input[type="date"] {
 <script>
 "use strict";
 const KEY = "nichiyohin:items:v1";
-const APP_VERSION = "2026.08.12";
+const APP_VERSION = "2026.08.12-2";
 const CATEGORIES = ["食料品","キッチン","バス・トイレ","洗濯","掃除","衛生・ケア","紙もの","その他"];
 const DATED = ["食料品"];
 const hasExpiry = (cat) => DATED.indexOf(cat) >= 0;
@@ -264,7 +264,7 @@ const TABS = [["list","一覧"],["add","登録"],["low","そろそろ"],["want",
 
 let items = [];
 let tab = "list";
-let openId = null, editId = null, confirmId = null, askExpiryId = null, askKindId = null;
+let openId = null, editId = null, confirmId = null, askExpiryId = null;
 let toast = "", quickMsg = "";
 let addDraft = { name: "", category: CATEGORIES[0], place: "", memo: "", expiry: "" };
 let addMore = false;   // 登録画面の「置き場所とメモ」を開いているか
@@ -317,7 +317,7 @@ function normalize() {
     if (CATEGORIES.indexOf(i.category) < 0) { i.category = "その他"; changed = true; }
     if (!hasExpiry(i.category) && i.expiry) { i.expiry = ""; changed = true; }
     // 買うものリスト以外に「今回だけ」は存在しない。取り違えたら管理対象に戻す
-    if (i.oneoff && i.status !== "low") { i.oneoff = false; changed = true; }
+    if (i.oneoff && i.status === "ok") { i.oneoff = false; changed = true; }
     if (!i.status) { i.status = "ok"; changed = true; }
     if (!i.prev) { i.prev = "ok"; changed = true; }
   });
@@ -341,14 +341,10 @@ const buyList = () => byStatus("low").sort((a,b) => (a.lowAt||0) - (b.lowAt||0))
 const wantList = () => byStatus("want").sort((a,b) => (b.wantAt||0) - (a.wantAt||0));
 const find = (id) => items.find(i => i.id === id);
 
-function toBuy(id) {           // ほしいな → 買うもの。種類を先に聞く
-  if (!find(id)) return;
-  askKindId = id; render();
-}
-function moveToBuy(id, oneoff) {
+function toBuy(id) {           // ほしいな → 買うもの。単発かどうかは追加時に決めてある
   const it = find(id); if (!it) return;
-  it.prev = it.status; it.status = "low"; it.lowAt = Date.now(); it.oneoff = !!oneoff;
-  askKindId = null; commit();
+  it.prev = it.status; it.status = "low"; it.lowAt = Date.now();
+  commit();
 }
 function toWant(id) {          // ほしいなへ
   const it = find(id); if (!it) return;
@@ -389,7 +385,8 @@ function askCat(target, rawName) {
   const name = String(rawName || "").trim();
   if (!name) { quickMsg = "品名を入れてください"; render(); return; }
   quickMsg = "";
-  quickPick = { target: target, name: name };
+  // ほしいなは、まず定期か単発かを聞く。買うものタブはボタンで分かれているのでカテゴリへ直行
+  quickPick = { target: target, name: name, stage: target === "want" ? "kind" : "cat" };
   render();
 }
 
@@ -439,6 +436,18 @@ function quickBox(target, label, placeholder, buttons) {
   const nameId = target === "want" ? "wName" : "bName";
 
   if (quickPick && quickPick.target === target) {
+    // 第1段階：ほしいなは、定期的に買うものか単発かを先に決める
+    if (quickPick.stage === "kind") {
+      return '<div class="quick"><span class="label">「' + esc(quickPick.name) + '」はどちらですか？</span>' +
+        '<div class="stack" style="margin:10px 0 12px">' +
+        '<button class="btn sm" id="qRepeat">定期的に購入したい</button>' +
+        '<button class="btn sm ghost" id="qOnce">単発で購入したい</button>' +
+        '</div>' +
+        '<p class="hint">定期的に購入するものは、買ったあとも一覧に残って在庫を管理できます。単発のものは買った時点でリストから消えます。</p>' +
+        '<button class="btn ghost sm" id="qCancel" style="margin-top:12px">やめる</button>' +
+        '</div>';
+    }
+    // 第2段階：定期的に買うものだけカテゴリを選ぶ
     return '<div class="quick"><span class="label">「' + esc(quickPick.name) + '」のカテゴリを選ぶ</span>' +
       '<div class="chips" style="margin:8px 0 12px">' + CATEGORIES.map(c =>
         '<button class="chip" data-qcat="' + esc(c) + '">' + esc(c) + '</button>').join("") + '</div>' +
@@ -526,8 +535,8 @@ function wantScreen() {
     return h + '</section>';
   }
   h += list.map(i => '<div class="card is-want"><div class="card-main"><div class="grow">' +
-    '<div class="name">' + esc(i.name) + '</div>' +
-    '<div class="meta">' + esc(i.category) + '／' + daysSince(i.wantAt) + '日前から' + '</div>' +
+    '<div class="name">' + esc(i.name) + (i.oneoff ? '<span class="pill once">単発</span>' : "") + '</div>' +
+    '<div class="meta">' + (i.oneoff ? '在庫は管理しません' : esc(i.category)) + '／' + daysSince(i.wantAt) + '日前から' + '</div>' +
     (i.memo ? '<div class="memo">' + esc(i.memo) + '</div>' : "") + '</div>' +
     '<div class="stack">' +
     '<button class="btn sm" data-tobuy="' + i.id + '">買う！</button>' +
@@ -676,20 +685,6 @@ function listScreen() {
 /* ---------- 賞味期限をたずねるシート ---------- */
 
 function modalHtml() {
-  if (askKindId) {
-    const w = find(askKindId);
-    if (!w) return "";
-    return '<div class="sheet-bg" id="sheetBg"><div class="sheet" role="dialog" aria-modal="true">' +
-      '<h2>どちらとして買いますか？</h2>' +
-      '<p class="who">' + esc(w.name) + '</p>' +
-      '<div class="stack" style="margin-top:14px">' +
-      '<button class="btn" id="kStock">切らしたくないもの</button>' +
-      '<button class="btn ghost" id="kOnce">今回だけ</button>' +
-      '</div>' +
-      '<p class="hint" style="margin-top:14px">「切らしたくないもの」は買ったあとも一覧に残り、次に減ったときまた「そろそろ」に入れられます。' +
-      '「今回だけ」は買った時点でリストから消えます。</p>' +
-      '</div></div>';
-  }
   const it = find(askExpiryId);
   if (!it) return "";
   return '<div class="sheet-bg" id="sheetBg"><div class="sheet" role="dialog" aria-modal="true">' +
@@ -719,7 +714,7 @@ function render() {
     tab === "low" ? lowScreen() :
     tab === "want" ? wantScreen() :
     tab === "buy" ? buyScreen() : listScreen();
-  $("#modal").innerHTML = (askExpiryId || askKindId) ? modalHtml() : "";
+  $("#modal").innerHTML = askExpiryId ? modalHtml() : "";
   const mx = $("#mExpiry"); if (mx) mx.focus();
 }
 
@@ -782,7 +777,7 @@ function importData(file) {
 document.addEventListener("click", (e) => {
   const t = e.target.closest("button");
   if (!t) {
-    if (e.target.id === "sheetBg") { askExpiryId = null; askKindId = null; render(); }
+    if (e.target.id === "sheetBg") { askExpiryId = null; render(); }
     return;
   }
   const d = t.dataset;
@@ -814,13 +809,17 @@ document.addEventListener("click", (e) => {
   if (t.id === "bAdd") return askCat("buy", $("#bName").value);
   if (t.id === "bAddOnce") return quickAdd($("#bName").value, "その他", "low", true);
   if (t.id === "qCancel") { quickPick = null; quickMsg = ""; return render(); }
+  if (t.id === "qRepeat") { if (quickPick) { quickPick.stage = "cat"; } return render(); }
+  if (t.id === "qOnce") {
+    const q = quickPick; quickPick = null;
+    if (q) return quickAdd(q.name, "その他", q.target === "want" ? "want" : "low", true);
+    return render();
+  }
   if (d.qcat) {
     const q = quickPick; quickPick = null;
     if (q) return quickAdd(q.name, d.qcat, q.target === "want" ? "want" : "low", false);
     return render();
   }
-  if (t.id === "kStock") return moveToBuy(askKindId, false);
-  if (t.id === "kOnce") return moveToBuy(askKindId, true);
 
   if (d.tobuy) return toBuy(d.tobuy);
   if (d.towant) return toWant(d.towant);
