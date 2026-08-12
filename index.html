@@ -163,6 +163,7 @@ input[type="date"] {
 }
 .pill.soon { background: var(--honey-pale); color: var(--honey-ink); }
 .pill.over { background: var(--coral); color: #fff; }
+.pill.once { background: var(--green-pale); color: var(--green-deep); }
 .pill.want { background: var(--pink-pale); color: var(--pink-ink); }
 .grow { flex: 1; min-width: 0; }
 .stack { display: flex; flex-direction: column; gap: 6px; }
@@ -250,7 +251,7 @@ input[type="date"] {
 <script>
 "use strict";
 const KEY = "nichiyohin:items:v1";
-const APP_VERSION = "2026.08.11-5";
+const APP_VERSION = "2026.08.11-6";
 const CATEGORIES = ["食料品","キッチン","バス・トイレ","洗濯","掃除","衛生・ケア","紙もの","その他"];
 const DATED = ["食料品"];
 const hasExpiry = (cat) => DATED.indexOf(cat) >= 0;
@@ -259,7 +260,7 @@ const TABS = [["list","一覧"],["add","登録"],["low","そろそろ"],["want",
 
 let items = [];
 let tab = "list";
-let openId = null, editId = null, confirmId = null, askExpiryId = null;
+let openId = null, editId = null, confirmId = null, askExpiryId = null, askKindId = null;
 let toast = "", quickMsg = "";
 let addDraft = { name: "", category: CATEGORIES[0], place: "", memo: "", expiry: "" };
 let addMore = false;   // 登録画面の「置き場所とメモ」を開いているか
@@ -311,6 +312,8 @@ function normalize() {
     if (RENAMED[i.category]) { i.category = RENAMED[i.category]; changed = true; }
     if (CATEGORIES.indexOf(i.category) < 0) { i.category = "その他"; changed = true; }
     if (!hasExpiry(i.category) && i.expiry) { i.expiry = ""; changed = true; }
+    // 買うものリスト以外に「今回だけ」は存在しない。取り違えたら管理対象に戻す
+    if (i.oneoff && i.status !== "low") { i.oneoff = false; changed = true; }
     if (!i.status) { i.status = "ok"; changed = true; }
     if (!i.prev) { i.prev = "ok"; changed = true; }
   });
@@ -334,9 +337,14 @@ const buyList = () => byStatus("low").sort((a,b) => (a.lowAt||0) - (b.lowAt||0))
 const wantList = () => byStatus("want").sort((a,b) => (b.wantAt||0) - (a.wantAt||0));
 const find = (id) => items.find(i => i.id === id);
 
-function toBuy(id) {           // そろそろ／買うものリストへ
+function toBuy(id) {           // ほしいな → 買うもの。種類を先に聞く
+  if (!find(id)) return;
+  askKindId = id; render();
+}
+function moveToBuy(id, oneoff) {
   const it = find(id); if (!it) return;
-  it.prev = it.status; it.status = "low"; it.lowAt = Date.now(); commit();
+  it.prev = it.status; it.status = "low"; it.lowAt = Date.now(); it.oneoff = !!oneoff;
+  askKindId = null; commit();
 }
 function toWant(id) {          // ほしいなへ
   const it = find(id); if (!it) return;
@@ -360,8 +368,20 @@ function bought(id) {
 }
 function removeItem(id) { items = items.filter(i => i.id !== id); confirmId = null; openId = null; commit(); }
 
+/* カードに「済」の判を押してから、たたんで処理する */
+function stampThen(id, done) {
+  const card = document.querySelector('[data-card="' + id + '"]');
+  if (!card) { done(); return; }
+  card.insertAdjacentHTML("beforeend", '<div class="stamp"><span>済</span></div>');
+  card.classList.add("collapsing");
+  setTimeout(done, 700);
+}
+
+/* 「今回だけ」の買い物メモは在庫として管理しないので、一覧と件数から外す */
+function stockItems() { return items.filter(i => !i.oneoff); }
+
 /* 同じ名前があれば作り直さず、そこへ移す */
-function quickAdd(rawName, cat, target) {
+function quickAdd(rawName, cat, target, oneoff) {
   const name = String(rawName || "").trim();
   if (!name) return;
   const dup = items.find(i => i.name.trim().toLowerCase() === name.toLowerCase());
@@ -370,15 +390,16 @@ function quickAdd(rawName, cat, target) {
     dup.prev = dup.status;
     dup.status = target;
     if (target === "low") dup.lowAt = Date.now(); else dup.wantAt = Date.now();
-    quickMsg = "登録ずみの「" + dup.name + "」を移しました";
+    // 既に登録してあるものは、今回だけ扱いにはせず管理対象のまま動かす
+    quickMsg = "登録ずみの「" + dup.name + "」を移しました" + (oneoff ? "（管理対象のままです）" : "");
     commit(); return;
   }
   items.unshift({ id: uid(), name: name, category: cat, place: "", memo: "", expiry: "",
-    status: target, prev: "ok",
+    status: target, prev: "ok", oneoff: !!oneoff,
     lowAt: target === "low" ? Date.now() : null,
     wantAt: target === "want" ? Date.now() : null,
     lastBoughtAt: null, buyCount: 0 });
-  quickMsg = "「" + name + "」を追加しました";
+  quickMsg = "「" + name + "」を" + (oneoff ? "今回だけの買い物として" : "") + "追加しました";
   commit();
 }
 
@@ -403,14 +424,15 @@ function selectHtml(id, sel) {
   return '<select class="sel" id="' + id + '">' + CATEGORIES.map(c =>
     '<option value="' + esc(c) + '"' + (sel === c ? " selected" : "") + '>' + esc(c) + '</option>').join("") + '</select>';
 }
-function quickBox(target, label, placeholder, btnLabel, btnClass) {
-  const ids = target === "want" ? ["wName","wCat","wAdd"] : ["bName","bCat","bAdd"];
+function quickBox(target, label, placeholder, buttons) {
+  const ids = target === "want" ? ["wName","wCat"] : ["bName","bCat"];
   return '<div class="quick"><span class="label">' + label + '</span>' +
     '<div class="quick-row">' +
       '<input class="input" id="' + ids[0] + '" placeholder="' + placeholder + '">' +
       selectHtml(ids[1], quickCat[target]) +
     '</div>' +
-    '<button class="btn sm ' + btnClass + '" id="' + ids[2] + '">' + btnLabel + '</button>' +
+    '<div class="row">' + buttons.map(b =>
+      '<button class="btn sm ' + (b[2] || "") + '" id="' + b[0] + '">' + b[1] + '</button>').join("") + '</div>' +
     (quickMsg ? '<p class="quick-msg">' + esc(quickMsg) + '</p>' : "") +
     '</div>';
 }
@@ -419,7 +441,7 @@ function quickBox(target, label, placeholder, btnLabel, btnClass) {
 
 function addScreen() {
   return '<section>' +
-    '<p class="lede">切らしたくないものを登録します。登録したものが管理の対象になります。</p>' +
+    '<p class="lede">定期的に購入する必要がある、切らしたくないものを登録します。登録したものが管理の対象になります。</p>' +
     '<label class="field"><span class="label">品名</span>' +
       '<input class="input" id="aName" value="' + esc(addDraft.name) + '" placeholder="トイレットペーパー"></label>' +
     '<div class="field"><span class="label">カテゴリ</span>' + chipsHtml(addDraft.category, "data-acat") + '</div>' +
@@ -480,7 +502,7 @@ function lowScreen() {
 function wantScreen() {
   const list = wantList();
   let h = '<section><p class="lede">すぐには要らないけれど、いつか欲しいものを置いておく場所です。買うと決めたら「買う！」で買うものリストへ移ります。</p>' +
-    quickBox("want", "ほしいなを追加", "新しいマグカップ", "ほしいなに入れる", "pinkish");
+    quickBox("want", "ほしいなを追加", "新しいマグカップ", [["wAdd", "ほしいなに入れる", "pinkish"]]);
 
   if (!list.length) {
     h += emptyBox("まだ何もありません", "気になったものを、思いついたときに入れておけます。", null, null);
@@ -501,7 +523,11 @@ function wantScreen() {
 function buyScreen() {
   const list = buyList();
   let h = '<section><p class="lede">買い物中に開く画面です。かごに入れたら「買ったよ」を押してください。ここから直接足すこともできます。</p>' +
-    quickBox("buy", "買うものを直接ふやす", "牛乳", "リストに足す", "");
+    quickBox("buy", "買うものを直接ふやす", "牛乳", [
+      ["bAdd", "リストに足す", ""],
+      ["bAddOnce", "今回だけ足す", "ghost"]
+    ]) +
+    '<p class="hint" style="margin-top:-6px;margin-bottom:16px">「今回だけ」は在庫を管理せず、買った時点でリストから消えます。お弁当用のお箸のような、一度きりの買い物メモ向けです。</p>';
 
   if (!list.length) {
     h += emptyBox("買うものはありません",
@@ -511,12 +537,19 @@ function buyScreen() {
   h += list.map(i => {
     const d = daysSince(i.lastBoughtAt);
     return '<div class="card' + cardClass(i) + '" data-card="' + i.id + '"><div class="card-main"><div class="grow">' +
-      '<div class="name">' + esc(i.name) + expiryPill(i) + (i.prev === "want" ? '<span class="pill want">ほしいな</span>' : "") + '</div>' +
-      '<div class="meta">' + esc(i.category) + '／前回 ' + fmtDate(i.lastBoughtAt) + (d !== null ? "（" + d + "日前）" : "") + '</div>' +
+      '<div class="name">' + esc(i.name) + expiryPill(i) +
+        (i.oneoff ? '<span class="pill once">今回だけ</span>'
+                  : (i.prev === "want" ? '<span class="pill want">ほしいな</span>' : "")) + '</div>' +
+      '<div class="meta">' + esc(i.category) +
+        (i.oneoff ? '／在庫は管理しません' : '／前回 ' + fmtDate(i.lastBoughtAt) + (d !== null ? "（" + d + "日前）" : "")) + '</div>' +
       (i.memo ? '<div class="memo">' + esc(i.memo) + '</div>' : "") + '</div>' +
       '<div class="stack">' +
-      '<button class="btn sm" data-buy="' + i.id + '">買ったよ</button>' +
-      '<button class="btn ghost sm" data-undo="' + i.id + '">戻す</button></div></div></div>';
+      (i.oneoff
+        ? '<button class="btn sm" data-buyoff="' + i.id + '">買ったよ</button>' +
+          '<button class="btn ghost sm" data-dropoff="' + i.id + '">買うのやめる</button>'
+        : '<button class="btn sm" data-buy="' + i.id + '">買ったよ</button>' +
+          '<button class="btn ghost sm" data-undo="' + i.id + '">戻す</button>') +
+      '</div></div></div>';
   }).join("");
   return h + '</section>';
 }
@@ -576,7 +609,7 @@ function listScreen() {
     if (i.status === "want") return 3;
     return 4;
   };
-  const shown = items
+  const shown = stockItems()
     .filter(i => {
       if (filter === "low") return i.status === "low";
       if (filter === "want") return i.status === "want";
@@ -626,6 +659,20 @@ function listScreen() {
 /* ---------- 賞味期限をたずねるシート ---------- */
 
 function modalHtml() {
+  if (askKindId) {
+    const w = find(askKindId);
+    if (!w) return "";
+    return '<div class="sheet-bg" id="sheetBg"><div class="sheet" role="dialog" aria-modal="true">' +
+      '<h2>どちらとして買いますか？</h2>' +
+      '<p class="who">' + esc(w.name) + '</p>' +
+      '<div class="stack" style="margin-top:14px">' +
+      '<button class="btn" id="kStock">切らしたくないもの</button>' +
+      '<button class="btn ghost" id="kOnce">今回だけ</button>' +
+      '</div>' +
+      '<p class="hint" style="margin-top:14px">「切らしたくないもの」は買ったあとも一覧に残り、次に減ったときまた「そろそろ」に入れられます。' +
+      '「今回だけ」は買った時点でリストから消えます。</p>' +
+      '</div></div>';
+  }
   const it = find(askExpiryId);
   if (!it) return "";
   return '<div class="sheet-bg" id="sheetBg"><div class="sheet" role="dialog" aria-modal="true">' +
@@ -641,7 +688,7 @@ function modalHtml() {
 /* ---------- 描画 ---------- */
 
 function render() {
-  $("#cAll").textContent = items.length;
+  $("#cAll").textContent = stockItems().length;
   $("#cLow").textContent = buyList().length;
   const nWant = wantList().length;
   $("#cWant").textContent = nWant;
@@ -655,7 +702,7 @@ function render() {
     tab === "low" ? lowScreen() :
     tab === "want" ? wantScreen() :
     tab === "buy" ? buyScreen() : listScreen();
-  $("#modal").innerHTML = askExpiryId ? modalHtml() : "";
+  $("#modal").innerHTML = (askExpiryId || askKindId) ? modalHtml() : "";
   const mx = $("#mExpiry"); if (mx) mx.focus();
 }
 
@@ -718,7 +765,7 @@ function importData(file) {
 document.addEventListener("click", (e) => {
   const t = e.target.closest("button");
   if (!t) {
-    if (e.target.id === "sheetBg") { askExpiryId = null; render(); }
+    if (e.target.id === "sheetBg") { askExpiryId = null; askKindId = null; render(); }
     return;
   }
   const d = t.dataset;
@@ -747,20 +794,17 @@ document.addEventListener("click", (e) => {
   }
   if (t.id === "aSubmit") return submitAdd();
   if (t.id === "wAdd") { quickCat.want = $("#wCat").value; return quickAdd($("#wName").value, quickCat.want, "want"); }
-  if (t.id === "bAdd") { quickCat.buy = $("#bCat").value; return quickAdd($("#bName").value, quickCat.buy, "low"); }
+  if (t.id === "bAdd") { quickCat.buy = $("#bCat").value; return quickAdd($("#bName").value, quickCat.buy, "low", false); }
+  if (t.id === "bAddOnce") { quickCat.buy = $("#bCat").value; return quickAdd($("#bName").value, quickCat.buy, "low", true); }
+  if (t.id === "kStock") return moveToBuy(askKindId, false);
+  if (t.id === "kOnce") return moveToBuy(askKindId, true);
 
   if (d.tobuy) return toBuy(d.tobuy);
   if (d.towant) return toWant(d.towant);
   if (d.undo) return undo(d.undo);
-  if (d.buy) {
-    const card = document.querySelector('[data-card="' + d.buy + '"]');
-    if (card) {
-      card.insertAdjacentHTML("beforeend", '<div class="stamp"><span>済</span></div>');
-      card.classList.add("collapsing");
-      setTimeout(() => bought(d.buy), 700);
-    } else { bought(d.buy); }
-    return;
-  }
+  if (d.buy) return stampThen(d.buy, () => bought(d.buy));
+  if (d.buyoff) return stampThen(d.buyoff, () => removeItem(d.buyoff));   // 今回だけ：買ったら消えるだけ
+  if (d.dropoff) return removeItem(d.dropoff);
   if (d.open) { openId = openId === d.open ? null : d.open; editId = null; confirmId = null; return render(); }
   if (d.edit) { editId = d.edit; return render(); }
   if (d.savee) return saveEdit(d.savee);
