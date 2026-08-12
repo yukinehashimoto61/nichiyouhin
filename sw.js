@@ -1,4 +1,4 @@
-const CACHE = "nichiyohin-v8";
+const CACHE = "nichiyohin-v9";
 const ASSETS = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./icon-512-maskable.png", "./apple-touch-icon.png"];
 
 self.addEventListener("install", (e) => {
